@@ -97,6 +97,8 @@ The dashboard can:
 - register a responder
 - submit a proposal
 
+https://callsignritual.vercel.app/
+
 ## Next steps
 
 1. Add accept-proposal + escrow form.
