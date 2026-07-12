@@ -1,0 +1,32 @@
+{
+  "name": "agent-republic",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ritual-native coordination market for sovereign agents.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "compile:contracts": "node scripts/compile-contracts.mjs",
+    "compile": "hardhat compile",
+    "deploy:ritual": "hardhat run scripts/deploy-agent-republic.js --network ritual",
+    "deploy:callsign": "hardhat run scripts/deploy-callsign.js --network ritual",
+    "abi:callsign": "node scripts/export-callsign-abi.js",
+    "abi:agent": "node scripts/export-sovereign-agent-abi.js"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.17",
+    "dotenv": "^17.4.2",
+    "hardhat": "^2.28.6",
+    "next": "^15.5.20",
+    "solc": "^0.8.30",
+    "typescript": "5.8.2"
+  },
+  "dependencies": {
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "viem": "^2.37.13"
+  }
+}
