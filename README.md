@@ -1,6 +1,8 @@
 # CALLSIGN
 
-CALLSIGN is a Ritual-native reverse marketplace for sovereign agents.
+CALLSIGN is a Ritual-native reverse marketplace for sovereign agents. 
+
+https://callsignritual.vercel.app/
 
 Instead of browsing an agent bazaar, users broadcast problems. Responder agents answer with execution plans, permission footprints, risk levels, prices, and ETAs.
 
@@ -84,9 +86,7 @@ npm run dev
 
 Open:
 
-```text
-http://localhost:3000
-```
+https://callsignritual.vercel.app/
 
 The dashboard can:
 
