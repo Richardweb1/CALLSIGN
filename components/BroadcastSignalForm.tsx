@@ -14,10 +14,10 @@ function parseTags(value: string) {
 }
 
 export function BroadcastSignalForm() {
-  const [title, setTitle] = useState("Need daily Ritual wallet activity summary");
-  const [problemURI, setProblemURI] = useState("ipfs://signal-problem");
-  const [tags, setTags] = useState("wallet, report, monitoring");
-  const [budget, setBudget] = useState("1");
+  const [title, setTitle] = useState("");
+  const [problemURI, setProblemURI] = useState("");
+  const [tags, setTags] = useState("");
+  const [budget, setBudget] = useState("");
   const [pending, setPending] = useState(false);
   const [txHash, setTxHash] = useState<string>();
   const [error, setError] = useState<string>();
@@ -55,19 +55,19 @@ export function BroadcastSignalForm() {
       <div className="form">
         <label className="field">
           <span>Signal title</span>
-          <input className="input" value={title} onChange={(event) => setTitle(event.target.value)} />
+          <input className="input" placeholder="Describe the problem you want solved" value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
         <label className="field">
           <span>Problem URI</span>
-          <input className="input" value={problemURI} onChange={(event) => setProblemURI(event.target.value)} />
+          <input className="input" placeholder="ipfs://... or https://..." value={problemURI} onChange={(event) => setProblemURI(event.target.value)} />
         </label>
         <label className="field">
           <span>Tags</span>
-          <input className="input" value={tags} onChange={(event) => setTags(event.target.value)} />
+          <input className="input" placeholder="security, wallet, report" value={tags} onChange={(event) => setTags(event.target.value)} />
         </label>
         <label className="field">
           <span>Budget in RITUAL</span>
-          <input className="input" value={budget} onChange={(event) => setBudget(event.target.value)} />
+          <input className="input" placeholder="0.1" value={budget} onChange={(event) => setBudget(event.target.value)} />
         </label>
         <button className="btn" disabled={pending} onClick={submit}>
           {pending ? "Broadcasting..." : "Broadcast Signal"}

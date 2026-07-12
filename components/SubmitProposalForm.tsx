@@ -8,13 +8,13 @@ import { sovereignAgentAbi } from "../lib/sovereignAgentAbi";
 import { publicClient, sendLegacyContractTransaction } from "../lib/viem";
 
 export function SubmitProposalForm() {
-  const [signalId, setSignalId] = useState("1");
-  const [agentId, setAgentId] = useState("1");
-  const [planURI, setPlanURI] = useState("ipfs://proposal-plan");
-  const [permissionURI, setPermissionURI] = useState("ipfs://permission-footprint");
-  const [riskLevel, setRiskLevel] = useState("1");
-  const [price, setPrice] = useState("1");
-  const [etaHours, setEtaHours] = useState("24");
+  const [signalId, setSignalId] = useState("");
+  const [agentId, setAgentId] = useState("");
+  const [planURI, setPlanURI] = useState("");
+  const [permissionURI, setPermissionURI] = useState("");
+  const [riskLevel, setRiskLevel] = useState("");
+  const [price, setPrice] = useState("");
+  const [etaHours, setEtaHours] = useState("");
   const [pending, setPending] = useState(false);
   const [agentPending, setAgentPending] = useState(false);
   const [txHash, setTxHash] = useState<string>();
@@ -97,33 +97,33 @@ export function SubmitProposalForm() {
         <div className="form-grid">
           <label className="field">
             <span>Signal ID</span>
-            <input className="input" value={signalId} onChange={(event) => setSignalId(event.target.value)} />
+            <input className="input" placeholder="Signal ID" value={signalId} onChange={(event) => setSignalId(event.target.value)} />
           </label>
           <label className="field">
             <span>Agent ID</span>
-            <input className="input" value={agentId} onChange={(event) => setAgentId(event.target.value)} />
+            <input className="input" placeholder="Agent ID" value={agentId} onChange={(event) => setAgentId(event.target.value)} />
           </label>
         </div>
         <label className="field">
           <span>Plan URI</span>
-          <input className="input" value={planURI} onChange={(event) => setPlanURI(event.target.value)} />
+          <input className="input" placeholder="ipfs://... or https://..." value={planURI} onChange={(event) => setPlanURI(event.target.value)} />
         </label>
         <label className="field">
           <span>Permission URI</span>
-          <input className="input" value={permissionURI} onChange={(event) => setPermissionURI(event.target.value)} />
+          <input className="input" placeholder="ipfs://... or https://..." value={permissionURI} onChange={(event) => setPermissionURI(event.target.value)} />
         </label>
         <div className="form-grid">
           <label className="field">
             <span>Risk 1-5</span>
-            <input className="input" value={riskLevel} onChange={(event) => setRiskLevel(event.target.value)} />
+            <input className="input" placeholder="1" value={riskLevel} onChange={(event) => setRiskLevel(event.target.value)} />
           </label>
           <label className="field">
             <span>Price</span>
-            <input className="input" value={price} onChange={(event) => setPrice(event.target.value)} />
+            <input className="input" placeholder="0.1" value={price} onChange={(event) => setPrice(event.target.value)} />
           </label>
           <label className="field">
             <span>ETA hours</span>
-            <input className="input" value={etaHours} onChange={(event) => setEtaHours(event.target.value)} />
+            <input className="input" placeholder="24" value={etaHours} onChange={(event) => setEtaHours(event.target.value)} />
           </label>
         </div>
         <button className="btn secondary" disabled={pending} onClick={submit}>

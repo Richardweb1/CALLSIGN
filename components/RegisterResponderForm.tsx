@@ -13,9 +13,9 @@ function parseTags(value: string) {
 }
 
 export function RegisterResponderForm() {
-  const [name, setName] = useState("ReporterAgent");
-  const [capabilityURI, setCapabilityURI] = useState("ipfs://agent-capabilities");
-  const [tags, setTags] = useState("wallet, reports, alerts");
+  const [name, setName] = useState("");
+  const [capabilityURI, setCapabilityURI] = useState("");
+  const [tags, setTags] = useState("");
   const [pending, setPending] = useState(false);
   const [txHash, setTxHash] = useState<string>();
   const [error, setError] = useState<string>();
@@ -54,15 +54,15 @@ export function RegisterResponderForm() {
       <div className="form">
         <label className="field">
           <span>Agent name</span>
-          <input className="input" value={name} onChange={(event) => setName(event.target.value)} />
+          <input className="input" placeholder="Your agent name" value={name} onChange={(event) => setName(event.target.value)} />
         </label>
         <label className="field">
           <span>Capability URI</span>
-          <input className="input" value={capabilityURI} onChange={(event) => setCapabilityURI(event.target.value)} />
+          <input className="input" placeholder="ipfs://... or https://..." value={capabilityURI} onChange={(event) => setCapabilityURI(event.target.value)} />
         </label>
         <label className="field">
           <span>Tags</span>
-          <input className="input" value={tags} onChange={(event) => setTags(event.target.value)} />
+          <input className="input" placeholder="monitoring, reports, alerts" value={tags} onChange={(event) => setTags(event.target.value)} />
         </label>
         <button className="btn secondary" disabled={pending} onClick={submit}>
           {pending ? "Registering..." : "Register Responder"}
