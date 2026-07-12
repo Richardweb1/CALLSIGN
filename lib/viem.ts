@@ -104,3 +104,7 @@ export async function sendLegacyContractTransaction<
 
   return hash;
 }
+
+export async function waitForTransaction(hash: `0x${string}`) {
+  return publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
+}

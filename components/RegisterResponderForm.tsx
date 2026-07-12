@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { parseEventLogs } from "viem";
 import { callsignAbi } from "../lib/callsignAbi";
 import { callsignAddress } from "../lib/contract";
-import { getInjectedAccount, sendLegacyContractTransaction } from "../lib/viem";
+import { getInjectedAccount, sendLegacyContractTransaction, waitForTransaction } from "../lib/viem";
 
 function parseTags(value: string) {
   return value
@@ -18,6 +19,10 @@ export function RegisterResponderForm() {
   const [tags, setTags] = useState("");
   const [pending, setPending] = useState(false);
   const [txHash, setTxHash] = useState<string>();
+  const [createdAgent, setCreatedAgent] = useState<{
+    id: string;
+    contract: string;
+  }>();
   const [error, setError] = useState<string>();
   const parsedTags = useMemo(() => parseTags(tags), [tags]);
 
@@ -27,14 +32,26 @@ export function RegisterResponderForm() {
     try {
       const account = await getInjectedAccount();
       const args = [account, name, capabilityURI, parsedTags] as const;
-      setTxHash(
-        await sendLegacyContractTransaction({
+      setCreatedAgent(undefined);
+      const hash = await sendLegacyContractTransaction({
           address: callsignAddress,
           abi: callsignAbi,
           functionName: "registerAgent",
           args,
-        }),
-      );
+      });
+      setTxHash(hash);
+      const receipt = await waitForTransaction(hash);
+      const [event] = parseEventLogs({
+        abi: callsignAbi,
+        eventName: "AgentRegistered",
+        logs: receipt.logs,
+      });
+      if (event?.args.agentId !== undefined) {
+        setCreatedAgent({
+          id: event.args.agentId.toString(),
+          contract: event.args.agentContract,
+        });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Transaction failed";
       setError(message.includes("User rejected") ? "Transaction cancelled in wallet." : message);
@@ -68,6 +85,14 @@ export function RegisterResponderForm() {
           {pending ? "Registering..." : "Register Responder"}
         </button>
         {error ? <p className="error-text">{error}</p> : null}
+        {createdAgent ? (
+          <div className="success-box">
+            <span className="kicker">Next step</span>
+            <strong>Agent ID: {createdAgent.id}</strong>
+            <p className="muted tx">Sovereign Agent: {createdAgent.contract}</p>
+            <p className="muted">Use this Agent ID when submitting a proposal.</p>
+          </div>
+        ) : null}
         {txHash ? <p className="muted tx">Tx: {txHash}</p> : null}
       </div>
     </div>

@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { parseEther } from "viem";
+import { parseEther, parseEventLogs } from "viem";
 import { callsignAbi } from "../lib/callsignAbi";
 import { callsignAddress } from "../lib/contract";
-import { sendLegacyContractTransaction } from "../lib/viem";
+import { sendLegacyContractTransaction, waitForTransaction } from "../lib/viem";
 
 function parseTags(value: string) {
   return value
@@ -20,6 +20,7 @@ export function BroadcastSignalForm() {
   const [budget, setBudget] = useState("");
   const [pending, setPending] = useState(false);
   const [txHash, setTxHash] = useState<string>();
+  const [createdSignalId, setCreatedSignalId] = useState<string>();
   const [error, setError] = useState<string>();
   const parsedTags = useMemo(() => parseTags(tags), [tags]);
 
@@ -28,14 +29,23 @@ export function BroadcastSignalForm() {
     setError(undefined);
     try {
       const args = [title, problemURI, parsedTags, parseEther(budget || "0"), 0n] as const;
-      setTxHash(
-        await sendLegacyContractTransaction({
+      setCreatedSignalId(undefined);
+      const hash = await sendLegacyContractTransaction({
         address: callsignAddress,
         abi: callsignAbi,
         functionName: "broadcastSignal",
         args,
-        }),
-      );
+      });
+      setTxHash(hash);
+      const receipt = await waitForTransaction(hash);
+      const [event] = parseEventLogs({
+        abi: callsignAbi,
+        eventName: "SignalBroadcast",
+        logs: receipt.logs,
+      });
+      if (event?.args.signalId !== undefined) {
+        setCreatedSignalId(event.args.signalId.toString());
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Transaction failed";
       setError(message.includes("User rejected") ? "Transaction cancelled in wallet." : message);
@@ -73,6 +83,13 @@ export function BroadcastSignalForm() {
           {pending ? "Broadcasting..." : "Broadcast Signal"}
         </button>
         {error ? <p className="error-text">{error}</p> : null}
+        {createdSignalId ? (
+          <div className="success-box">
+            <span className="kicker">Next step</span>
+            <strong>Signal ID: {createdSignalId}</strong>
+            <p className="muted">Use this ID when an agent submits a proposal.</p>
+          </div>
+        ) : null}
         {txHash ? <p className="muted tx">Tx: {txHash}</p> : null}
       </div>
     </div>

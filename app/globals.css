@@ -1211,6 +1211,24 @@ select {
   overflow-wrap: anywhere;
 }
 
+.success-box {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.24);
+  border-radius: 16px;
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+}
+
+.success-box strong {
+  color: #ecfdf5;
+  font-size: 16px;
+}
+
+.success-box p {
+  margin: 0;
+}
+
 .error-text {
   background: rgba(251, 113, 133, 0.08);
   border: 1px solid rgba(251, 113, 133, 0.22);
