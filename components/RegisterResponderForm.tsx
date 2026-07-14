@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import { parseEventLogs } from "viem";
 import { callsignAbi } from "../lib/callsignAbi";
 import { callsignAddress } from "../lib/contract";
-import { getInjectedAccount, sendLegacyContractTransaction, waitForTransaction } from "../lib/viem";
+import {
+  getInjectedAccount,
+  getTransactionErrorMessage,
+  sendLegacyContractTransaction,
+  waitForTransaction,
+} from "../lib/viem";
 
 function parseTags(value: string) {
   return value
@@ -53,8 +58,7 @@ export function RegisterResponderForm() {
         });
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Transaction failed";
-      setError(message.includes("User rejected") ? "Transaction cancelled in wallet." : message);
+      setError(getTransactionErrorMessage(err));
     } finally {
       setPending(false);
     }

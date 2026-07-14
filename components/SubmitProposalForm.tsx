@@ -1,25 +1,106 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { parseEther, parseEventLogs } from "viem";
 import { callsignAbi } from "../lib/callsignAbi";
 import { callsignAddress } from "../lib/contract";
 import { sovereignAgentAbi } from "../lib/sovereignAgentAbi";
-import { publicClient, sendLegacyContractTransaction, waitForTransaction } from "../lib/viem";
+import {
+  getTransactionErrorMessage,
+  publicClient,
+  sendLegacyContractTransaction,
+  waitForTransaction,
+} from "../lib/viem";
 
-export function SubmitProposalForm() {
-  const [signalId, setSignalId] = useState("");
+type ProposalSignalContext = {
+  signalId?: string;
+  title?: string;
+  problemURI?: string;
+  budget?: string;
+  tags?: string[];
+  metadata?: {
+    title?: string;
+    description?: string;
+    urgency?: string;
+    location?: string;
+    requestedCapabilities?: string[];
+    evidenceLinks?: string[];
+    budget?: string;
+  };
+};
+
+type AnalysisDraft = {
+  source?: string;
+  plan?: string[];
+  permissions?: string[];
+  riskLevel?: number;
+  etaHours?: number;
+  price?: string;
+  confidence?: string;
+  ritual?: {
+    precompile?: string;
+    model?: string;
+    encodedLlmInput?: string;
+  };
+};
+
+export function SubmitProposalForm({ signalContext }: { signalContext?: ProposalSignalContext }) {
+  const [signalId, setSignalId] = useState(signalContext?.signalId || "");
   const [agentId, setAgentId] = useState("");
   const [planURI, setPlanURI] = useState("");
   const [permissionURI, setPermissionURI] = useState("");
   const [riskLevel, setRiskLevel] = useState("");
   const [price, setPrice] = useState("");
   const [etaHours, setEtaHours] = useState("");
+  const [analysisPending, setAnalysisPending] = useState(false);
+  const [analysisDraft, setAnalysisDraft] = useState<AnalysisDraft>();
+  const [analysisWarning, setAnalysisWarning] = useState<string>();
   const [pending, setPending] = useState(false);
   const [agentPending, setAgentPending] = useState(false);
   const [txHash, setTxHash] = useState<string>();
   const [createdProposalId, setCreatedProposalId] = useState<string>();
   const [error, setError] = useState<string>();
+
+  useEffect(() => {
+    if (signalContext?.signalId) setSignalId(signalContext.signalId);
+  }, [signalContext?.signalId]);
+
+  async function analyzeSignal() {
+    setAnalysisPending(true);
+    setError(undefined);
+    setAnalysisWarning(undefined);
+    try {
+      const response = await fetch("/api/ritual/analyze-signal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          signalId,
+          agentId,
+          signal: {
+            title: signalContext?.title,
+            problemURI: signalContext?.problemURI,
+            budget: signalContext?.budget,
+            tags: signalContext?.tags,
+          },
+          metadata: signalContext?.metadata,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to analyze signal.");
+
+      setAnalysisDraft(result.draft);
+      if (result.planURI) setPlanURI(result.planURI);
+      if (result.permissionURI) setPermissionURI(result.permissionURI);
+      if (result.draft?.riskLevel) setRiskLevel(String(result.draft.riskLevel));
+      if (result.draft?.price) setPrice(result.draft.price);
+      if (result.draft?.etaHours) setEtaHours(String(result.draft.etaHours));
+      if (result.warning) setAnalysisWarning(result.warning);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to analyze signal.");
+    } finally {
+      setAnalysisPending(false);
+    }
+  }
 
   async function submit() {
     setPending(true);
@@ -52,8 +133,7 @@ export function SubmitProposalForm() {
         setCreatedProposalId(event.args.proposalId.toString());
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Transaction failed";
-      setError(message.includes("User rejected") ? "Transaction cancelled in wallet." : message);
+      setError(getTransactionErrorMessage(err));
     } finally {
       setPending(false);
     }
@@ -98,8 +178,7 @@ export function SubmitProposalForm() {
         setCreatedProposalId(event.args.proposalId.toString());
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Transaction failed";
-      setError(message.includes("User rejected") ? "Transaction cancelled in wallet." : message);
+      setError(getTransactionErrorMessage(err));
     } finally {
       setAgentPending(false);
     }
@@ -108,9 +187,9 @@ export function SubmitProposalForm() {
   return (
     <div className="card action-card surface-in delay-6">
       <span className="kicker">Respond</span>
-      <h2>Submit agent proposal</h2>
+      <h2>Submit agent response</h2>
       <p className="muted">
-        Agents answer a signal with plan, permission footprint, price, and risk.
+        Agents answer with a plan, permission scope, price, ETA, and risk level.
       </p>
       <div className="form compact-form">
         <div className="form-grid">
@@ -123,6 +202,33 @@ export function SubmitProposalForm() {
             <input className="input" placeholder="Agent ID" value={agentId} onChange={(event) => setAgentId(event.target.value)} />
           </label>
         </div>
+        <button className="btn secondary" disabled={analysisPending || !signalId} onClick={analyzeSignal}>
+          {analysisPending ? "Analyzing..." : "Analyze with Ritual LLM"}
+        </button>
+        {analysisDraft ? (
+          <div className="analysis-box">
+            <div className="row-head">
+              <span className="kicker">Ritual analysis</span>
+              <span className="pill">{analysisDraft.source || "draft"}</span>
+            </div>
+            <p className="muted">
+              Precompile {analysisDraft.ritual?.precompile || "0x0802"} · {analysisDraft.ritual?.model || "GLM"}
+            </p>
+            <strong>Plan</strong>
+            <ul>
+              {(analysisDraft.plan || []).map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+            <strong>Permissions</strong>
+            <ul>
+              {(analysisDraft.permissions || []).map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+            {analysisWarning ? <p className="error-text">{analysisWarning}</p> : null}
+          </div>
+        ) : null}
         <label className="field">
           <span>Plan URI</span>
           <input className="input" placeholder="ipfs://... or https://..." value={planURI} onChange={(event) => setPlanURI(event.target.value)} />
@@ -146,7 +252,7 @@ export function SubmitProposalForm() {
           </label>
         </div>
         <button className="btn secondary" disabled={pending} onClick={submit}>
-          {pending ? "Submitting..." : "Submit Proposal"}
+          {pending ? "Submitting..." : "Submit Response"}
         </button>
         <button className="btn agent-btn" disabled={agentPending} onClick={submitViaSovereignAgent}>
           {agentPending ? "Agent proposing..." : "Propose via Sovereign Agent"}
@@ -154,9 +260,9 @@ export function SubmitProposalForm() {
         {error ? <p className="error-text">{error}</p> : null}
         {createdProposalId ? (
           <div className="success-box">
-            <span className="kicker">Proposal created</span>
-            <strong>Proposal ID: {createdProposalId}</strong>
-            <p className="muted">The user can now review and accept this agent plan.</p>
+            <span className="kicker">Response created</span>
+            <strong>Response ID: {createdProposalId}</strong>
+            <p className="muted">The user can now review and accept this agent response.</p>
           </div>
         ) : null}
         {txHash ? <p className="muted tx">Tx: {txHash}</p> : null}
