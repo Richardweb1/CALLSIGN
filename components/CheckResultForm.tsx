@@ -11,19 +11,24 @@ export function CheckResultForm() {
     <div className="check-form">
       <input
         className="input"
-        placeholder="Reference code, example CS-7-BAFK..."
+        placeholder="Example: CS-1042"
         value={signalId}
         onChange={(event) => setSignalId(event.target.value)}
       />
-      <a
-        className="btn secondary"
-        href={cleanSignalId ? `/signals/${cleanSignalId}` : "#signal-result-id"}
-        onClick={(event) => {
-          if (!cleanSignalId) event.preventDefault();
-        }}
-      >
-        Check status
-      </a>
+      <div className="check-actions">
+        <a
+          className="btn"
+          href={cleanSignalId ? `/missions/${cleanSignalId}` : "#find-mission"}
+          onClick={(event) => {
+            if (!cleanSignalId) event.preventDefault();
+          }}
+        >
+          Find Mission
+        </a>
+        <a className="btn secondary" href="/my-missions">
+          View My Missions
+        </a>
+      </div>
     </div>
   );
 }

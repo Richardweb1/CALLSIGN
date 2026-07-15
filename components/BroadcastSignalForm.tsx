@@ -21,13 +21,17 @@ function parseTags(value: string) {
 export function BroadcastSignalForm() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Development");
+  const [offerDeadline, setOfferDeadline] = useState("3 days");
   const [urgency, setUrgency] = useState("Normal");
   const [tags, setTags] = useState("");
   const [location, setLocation] = useState("");
   const [requestedCapabilities, setRequestedCapabilities] = useState("");
   const [evidenceLinks, setEvidenceLinks] = useState("");
+  const [extraInstructions, setExtraInstructions] = useState("");
   const [budget, setBudget] = useState("");
   const [pending, setPending] = useState(false);
+  const [progress, setProgress] = useState<string>();
   const [txHash, setTxHash] = useState<string>();
   const [createdSignalId, setCreatedSignalId] = useState<string>();
   const [createdIpfsUri, setCreatedIpfsUri] = useState<string>();
@@ -48,25 +52,37 @@ export function BroadcastSignalForm() {
   const referenceCode = createdSignalId
     ? makeSignalReference(createdSignalId, createdIpfsUri)
     : "";
+  const deadlineSeconds = useMemo(() => {
+    if (offerDeadline === "24 hours") return BigInt(Math.floor(Date.now() / 1000) + 24 * 60 * 60);
+    if (offerDeadline === "3 days") return BigInt(Math.floor(Date.now() / 1000) + 3 * 24 * 60 * 60);
+    if (offerDeadline === "7 days") return BigInt(Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60);
+    return 0n;
+  }, [offerDeadline]);
 
   async function submit() {
     setPending(true);
     setError(undefined);
+    setProgress("Preparing mission");
     try {
       setCreatedSignalId(undefined);
       setCreatedIpfsUri(undefined);
+      const missionTags = Array.from(new Set([category.toLowerCase(), ...parsedTags]));
 
+      setProgress("Uploading mission details");
       const uploadResponse = await fetch("/api/ipfs/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
           description,
+          category,
+          offerDeadline,
           urgency,
-          tags: parsedTags,
+          tags: missionTags,
           location,
           requestedCapabilities: parsedCapabilities,
           evidenceLinks: parsedEvidence,
+          extraInstructions,
           budget,
         }),
       });
@@ -78,10 +94,11 @@ export function BroadcastSignalForm() {
       const args = [
         title,
         uploadResult.ipfsUri as string,
-        parsedTags,
+        missionTags,
         parseEther(budget || "0"),
-        0n,
+        deadlineSeconds,
       ] as const;
+      setProgress("Creating on-chain signal");
       const hash = await sendLegacyContractTransaction({
         address: callsignAddress,
         abi: callsignAbi,
@@ -90,6 +107,7 @@ export function BroadcastSignalForm() {
       });
       setTxHash(hash);
       setCreatedIpfsUri(uploadResult.ipfsUri);
+      setProgress("Confirming transaction");
       const receipt = await waitForTransaction(hash);
       const [event] = parseEventLogs({
         abi: callsignAbi,
@@ -99,6 +117,7 @@ export function BroadcastSignalForm() {
       if (event?.args.signalId !== undefined) {
         setCreatedSignalId(event.args.signalId.toString());
       }
+      setProgress("Mission published");
     } catch (err) {
       setError(getTransactionErrorMessage(err));
     } finally {
@@ -108,63 +127,109 @@ export function BroadcastSignalForm() {
 
   return (
     <div className="card action-card primary-action-card surface-in delay-4">
-      <span className="kicker">Submit</span>
-      <h2>Submit a problem</h2>
+      <span className="kicker">Post Mission</span>
+      <h2>Post a mission</h2>
       <p className="muted">
-        Submit the problem once. CALLSIGN uploads the details to IPFS, then your wallet saves
-        the request on Ritual so you can check results later.
+        Describe what you need. Agents can review your mission and send you an offer.
       </p>
       <p className="safety-note">
-        Do not include private keys, seed phrases, passwords, admin credentials, or private user data.
+        Mission details may be publicly accessible. Do not include passwords, private keys,
+        credentials, personal data, or confidential files.
       </p>
       <div className="form">
         <label className="field">
-          <span>Signal title</span>
-          <input className="input" placeholder="Describe the problem you want solved" value={title} onChange={(event) => setTitle(event.target.value)} />
+          <span>Mission title</span>
+          <input className="input" placeholder="Example: Review my smart contract" value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
         <label className="field">
-          <span>Description</span>
-          <textarea className="input textarea" placeholder="Explain the issue, goal, expected output, and constraints" value={description} onChange={(event) => setDescription(event.target.value)} />
+          <span>Mission description</span>
+          <textarea className="input textarea" placeholder="Describe the task, expected result, and any important requirements." value={description} onChange={(event) => setDescription(event.target.value)} />
         </label>
         <div className="form-grid">
           <label className="field">
-            <span>Urgency</span>
-            <select className="input" value={urgency} onChange={(event) => setUrgency(event.target.value)}>
-              <option>Low</option>
-              <option>Normal</option>
-              <option>High</option>
-              <option>Critical</option>
+            <span>Category</span>
+            <select className="input" value={category} onChange={(event) => setCategory(event.target.value)}>
+              <option>Research</option>
+              <option>Development</option>
+              <option>Security</option>
+              <option>Automation</option>
+              <option>Data Analysis</option>
+              <option>Other</option>
             </select>
           </label>
           <label className="field">
-            <span>Location optional</span>
-            <input className="input" placeholder="Website, repo, city, protocol..." value={location} onChange={(event) => setLocation(event.target.value)} />
+            <span>Offer deadline</span>
+            <select className="input" value={offerDeadline} onChange={(event) => setOfferDeadline(event.target.value)}>
+              <option>24 hours</option>
+              <option>3 days</option>
+              <option>7 days</option>
+              <option>Custom</option>
+            </select>
           </label>
         </div>
-        <label className="field">
-          <span>Tags</span>
-          <input className="input" placeholder="security, wallet, report" value={tags} onChange={(event) => setTags(event.target.value)} />
-        </label>
-        <label className="field">
-          <span>Requested capabilities</span>
-          <input className="input" placeholder="qa, monitoring, frontend review" value={requestedCapabilities} onChange={(event) => setRequestedCapabilities(event.target.value)} />
-        </label>
-        <label className="field">
-          <span>Evidence links optional</span>
-          <textarea className="input textarea small-textarea" placeholder="One URL per line" value={evidenceLinks} onChange={(event) => setEvidenceLinks(event.target.value)} />
-        </label>
         <label className="field">
           <span>Budget in RITUAL</span>
           <input className="input" placeholder="0.1" value={budget} onChange={(event) => setBudget(event.target.value)} />
         </label>
+        <details className="advanced-options">
+          <summary>Advanced Options</summary>
+          <div className="form advanced-options-grid">
+            <div className="form-grid">
+              <label className="field">
+                <span>Urgency</span>
+                <select className="input" value={urgency} onChange={(event) => setUrgency(event.target.value)}>
+                  <option>Low</option>
+                  <option>Normal</option>
+                  <option>High</option>
+                  <option>Critical</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Location optional</span>
+                <input className="input" placeholder="Website, repo, city, protocol..." value={location} onChange={(event) => setLocation(event.target.value)} />
+              </label>
+            </div>
+            <label className="field">
+              <span>Tags</span>
+              <input className="input" placeholder="security, wallet, report" value={tags} onChange={(event) => setTags(event.target.value)} />
+            </label>
+            <label className="field">
+              <span>Required capabilities</span>
+              <input className="input" placeholder="qa, monitoring, frontend review" value={requestedCapabilities} onChange={(event) => setRequestedCapabilities(event.target.value)} />
+            </label>
+            <label className="field">
+              <span>Evidence links optional</span>
+              <textarea className="input textarea small-textarea" placeholder="One URL per line" value={evidenceLinks} onChange={(event) => setEvidenceLinks(event.target.value)} />
+            </label>
+            <label className="field">
+              <span>Extra instructions</span>
+              <textarea className="input textarea small-textarea" placeholder="Anything agents should know before sending an offer." value={extraInstructions} onChange={(event) => setExtraInstructions(event.target.value)} />
+            </label>
+          </div>
+        </details>
         <button className="btn" disabled={pending} onClick={submit}>
-          {pending ? "Submitting..." : "Submit Problem"}
+          {pending ? progress || "Posting..." : "Post Mission"}
         </button>
         {error ? <p className="error-text">{error}</p> : null}
         {createdSignalId ? (
           <div className="success-box">
-            <span className="kicker">Saved</span>
-            <strong>Reference: {referenceCode}</strong>
+            <span className="kicker">Your mission is live.</span>
+            <strong>{title}</strong>
+            <p className="muted">Current status: Open</p>
+            <p className="muted">Reference ID: {referenceCode}</p>
+            <p className="muted">Budget: {budget || "0"} RITUAL</p>
+            <p className="muted">Offer deadline: {offerDeadline}</p>
+            <div className="success-actions">
+              <a className="btn secondary" href={`/signals/${createdSignalId}`}>
+                View Mission
+              </a>
+              <button className="btn secondary" type="button" onClick={() => navigator.clipboard?.writeText(referenceCode)}>
+                Copy Reference ID
+              </button>
+              <a className="btn secondary" href={`/signals/${createdSignalId}`}>
+                Share Mission
+              </a>
+            </div>
             <p className="muted">
               Your request is saved. Reconnect the same wallet later and CALLSIGN will show it
               under your latest submission.

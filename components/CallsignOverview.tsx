@@ -21,7 +21,6 @@ async function readSignal(id: bigint) {
 }
 
 export function CallsignOverview() {
-  const [missionIds, setMissionIds] = useState<bigint[]>([]);
   const [signals, setSignals] = useState<Signal[]>([]);
   const [account, setAccount] = useState<Address>();
   const [error, setError] = useState<string>();
@@ -50,18 +49,11 @@ export function CallsignOverview() {
 
     async function load() {
       try {
-        const [allSignals, allMissions] = await Promise.all([
-          publicClient.readContract({
-            address: callsignAddress,
-            abi: callsignAbi,
-            functionName: "getAllSignalIds",
-          }),
-          publicClient.readContract({
-            address: callsignAddress,
-            abi: callsignAbi,
-            functionName: "getAllMissionIds",
-          }),
-        ]);
+        const allSignals = await publicClient.readContract({
+          address: callsignAddress,
+          abi: callsignAbi,
+          functionName: "getAllSignalIds",
+        });
 
         const recentSignalIds = [...allSignals].reverse().slice(0, 20);
         const recentSignalResults = await Promise.allSettled(recentSignalIds.map(readSignal));
@@ -71,13 +63,11 @@ export function CallsignOverview() {
         const normalizedAccount = account?.toLowerCase();
         const ownedSignals = normalizedAccount
           ? recentSignals.filter(
-              (signal) =>
-                signal.creator.toLowerCase() === normalizedAccount && signal.status === 0,
+              (signal) => signal.creator.toLowerCase() === normalizedAccount,
             )
           : [];
 
         if (!cancelled) {
-          setMissionIds([...allMissions]);
           setSignals(ownedSignals);
           setError(undefined);
         }
@@ -97,32 +87,22 @@ export function CallsignOverview() {
 
   return (
     <>
-      <div className="grid stats-grid">
-        <div className="stat stat-hot surface-in delay-1">
-          <strong>{signals.length}</strong>
-          <span className="muted">Your requests</span>
-        </div>
-        <div className="stat surface-in delay-2">
-          <strong>{missionIds.length}</strong>
-          <span className="muted">Missions on CALLSIGN</span>
-        </div>
-      </div>
       {error ? <p className="error-text">{error}</p> : null}
 
       <div className="section-title surface-in delay-2">
-        <h2>Your latest submission</h2>
+        <h2>Find results from your wallet</h2>
         <span className="muted">
-          {account ? `Connected as ${shortAddress(account)}` : "Connect wallet to view your signals"}
+          {account ? `Connected as ${shortAddress(account)}` : "Connect wallet to view your missions"}
         </span>
       </div>
-      <div className="list surface-in delay-3">
+      <div className="list compact-wallet-list surface-in delay-3">
         {!account ? (
           <div className="row empty-state">
-            Connect your wallet to see the signals you submitted and their results.
+            Connect your wallet to see the latest mission you posted.
           </div>
         ) : signals.length ? (
           <>
-            <Link className="row latest-row" href={`/signals/${signals[0].id.toString()}`}>
+            <Link className="row latest-row" href={`/missions/${signals[0].id.toString()}`}>
               <div className="row-head">
                 <div>
                   <span className="kicker">
@@ -145,14 +125,13 @@ export function CallsignOverview() {
             </Link>
             {signals.length > 1 ? (
               <p className="muted overview-note">
-                Showing your latest signal. You have {signals.length} submissions on this wallet.
-                Use the reference checker below to open older results.
+                Showing your latest mission. Use My Missions to view all {signals.length} missions from this wallet.
               </p>
             ) : null}
           </>
         ) : (
           <div className="row empty-state">
-            No signals found for this wallet yet. Submit a problem signal below, then reconnect later to find the result here.
+            No missions found for this wallet yet. Post a mission below, then reconnect later to find it here.
           </div>
         )}
       </div>

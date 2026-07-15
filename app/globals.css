@@ -1,16 +1,17 @@
 :root {
   color-scheme: dark;
-  --bg: #070812;
-  --panel: rgba(18, 20, 32, 0.78);
-  --panel-2: rgba(25, 28, 43, 0.92);
-  --text: #f6f7fb;
-  --muted: #a8b0c3;
-  --line: rgba(154, 166, 206, 0.16);
-  --accent: #f59e0b;
-  --accent-2: #22d3ee;
-  --accent-3: #8b5cf6;
+  --bg: #04100b;
+  --panel: rgba(8, 20, 16, 0.82);
+  --panel-2: rgba(12, 27, 22, 0.94);
+  --text: #f3fff8;
+  --muted: #9fb9ad;
+  --line: rgba(75, 255, 156, 0.16);
+  --accent: #22c55e;
+  --accent-2: #14b8a6;
+  --accent-3: #38bdf8;
+  --ritual-green: #22c55e;
   --danger: #fb7185;
-  --good: #34d399;
+  --good: #059669;
 }
 
 * {
@@ -20,9 +21,10 @@
 body {
   margin: 0;
   background:
-    radial-gradient(circle at 10% -10%, rgba(245, 158, 11, 0.22), transparent 35rem),
-    radial-gradient(circle at 82% 8%, rgba(34, 211, 238, 0.16), transparent 32rem),
-    radial-gradient(circle at 72% 88%, rgba(139, 92, 246, 0.16), transparent 34rem),
+    radial-gradient(circle at 10% -10%, rgba(34, 197, 94, 0.3), transparent 34rem),
+    radial-gradient(circle at 85% 8%, rgba(16, 185, 129, 0.26), transparent 30rem),
+    radial-gradient(circle at 50% 92%, rgba(20, 184, 166, 0.16), transparent 34rem),
+    linear-gradient(135deg, #03110b 0%, #07110f 48%, #020706 100%),
     var(--bg);
   color: var(--text);
   font-family:
@@ -33,9 +35,11 @@ body {
 body::before {
   animation: gridDrift 24s linear infinite;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 72px 72px;
+    linear-gradient(118deg, transparent 0 38%, rgba(34, 197, 94, 0.16) 39%, transparent 42%),
+    linear-gradient(24deg, transparent 0 55%, rgba(20, 184, 166, 0.12) 56%, transparent 59%),
+    linear-gradient(rgba(134, 239, 172, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(134, 239, 172, 0.07) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 72px 72px, 72px 72px;
   content: "";
   inset: 0;
   mask-image: linear-gradient(to bottom, black, transparent 70%);
@@ -46,12 +50,14 @@ body::before {
 body::after {
   animation: ambientGlow 14s ease-in-out infinite alternate;
   background:
-    radial-gradient(circle at 22% 18%, rgba(245, 158, 11, 0.08), transparent 22rem),
-    radial-gradient(circle at 78% 12%, rgba(34, 211, 238, 0.06), transparent 20rem),
-    radial-gradient(circle at 52% 80%, rgba(139, 92, 246, 0.08), transparent 24rem);
+    url("/ritual-symbol.png") calc(100% - 6vw) 140px / min(32vw, 360px) no-repeat,
+    radial-gradient(circle at 22% 18%, rgba(34, 197, 94, 0.18), transparent 22rem),
+    radial-gradient(circle at 78% 12%, rgba(20, 184, 166, 0.07), transparent 20rem),
+    radial-gradient(circle at 52% 80%, rgba(37, 99, 235, 0.05), transparent 24rem);
   content: "";
   inset: 0;
-  opacity: 0.115;
+  filter: drop-shadow(0 0 28px rgba(34, 197, 94, 0.18)) saturate(1.15);
+  opacity: 0.18;
   pointer-events: none;
   position: fixed;
   z-index: 0;
@@ -132,6 +138,7 @@ select {
 .nav {
   align-items: center;
   display: flex;
+  gap: 18px;
   justify-content: space-between;
   margin-bottom: 40px;
   position: relative;
@@ -154,7 +161,7 @@ select {
   height: 42px;
   justify-content: center;
   width: 42px;
-  box-shadow: 0 0 40px rgba(245, 158, 11, 0.35);
+  box-shadow: 0 14px 30px rgba(14, 165, 233, 0.18);
   position: relative;
 }
 
@@ -174,6 +181,30 @@ select {
   gap: 12px;
 }
 
+.nav-links {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.nav-links a {
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 750;
+  padding: 9px 11px;
+}
+
+.nav-links a:hover,
+.nav-links a:focus-visible {
+  background: rgba(14, 165, 233, 0.08);
+  color: var(--text);
+  outline: none;
+}
+
 .pill {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--line);
@@ -183,10 +214,10 @@ select {
 }
 
 .btn {
-  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
   border: 0;
   border-radius: 12px;
-  box-shadow: 0 14px 32px rgba(99, 102, 241, 0.25);
+  box-shadow: 0 14px 32px rgba(14, 165, 233, 0.18);
   color: white;
   cursor: pointer;
   font-weight: 700;
@@ -215,8 +246,9 @@ select {
 }
 
 .btn.secondary {
-  background: var(--panel-2);
+  background: rgba(8, 20, 16, 0.86);
   border: 1px solid var(--line);
+  color: var(--text);
   box-shadow: none;
 }
 
@@ -244,18 +276,16 @@ select {
 
 .hero {
   animation: riseIn 720ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
-  display: grid;
-  gap: 20px;
-  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+  display: block;
   margin-bottom: 28px;
 }
 
 .card {
   backdrop-filter: blur(22px);
-  background: linear-gradient(180deg, rgba(18, 20, 32, 0.86), rgba(12, 14, 24, 0.78));
+  background: linear-gradient(180deg, rgba(10, 24, 19, 0.9), rgba(4, 13, 10, 0.84));
   border: 1px solid var(--line);
   border-radius: 24px;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28), 0 0 44px rgba(34, 197, 94, 0.08);
   padding: 24px;
   position: relative;
   transform-style: preserve-3d;
@@ -316,25 +346,32 @@ select {
 .hero-copy {
   display: flex;
   flex-direction: column;
-  min-height: 560px;
+  min-height: 390px;
   overflow: hidden;
 }
 
 .hero-noise {
   background-image:
-    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.12) 0 1px, transparent 1px),
-    radial-gradient(circle at 80% 30%, rgba(245, 158, 11, 0.16) 0 1px, transparent 1px);
-  background-size: 46px 46px, 74px 74px;
+    linear-gradient(115deg, transparent 0 44%, rgba(34, 197, 94, 0.18) 45%, transparent 48%),
+    radial-gradient(circle at 20% 20%, rgba(34, 197, 94, 0.18) 0 1px, transparent 1px),
+    radial-gradient(circle at 80% 30%, rgba(20, 184, 166, 0.16) 0 1px, transparent 1px);
+  background-position: center, 0 0, 0 0;
+  background-size: 100% 100%, 46px 46px, 74px 74px;
   inset: 0;
-  mask-image: linear-gradient(135deg, black, transparent 62%);
-  opacity: 0.38;
+  mask-image: linear-gradient(115deg, black, transparent 72%);
+  opacity: 0.24;
   pointer-events: none;
   position: absolute;
 }
 
+.hero-copy > :not(.hero-noise) {
+  position: relative;
+  z-index: 2;
+}
+
 .hero-copy::before {
   animation: slowDrift 10s ease-in-out infinite alternate;
-  background: radial-gradient(circle, rgba(245, 158, 11, 0.18), transparent 60%);
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.2), transparent 60%);
   content: "";
   height: 380px;
   position: absolute;
@@ -434,6 +471,71 @@ select {
 
 .feature-strip span:nth-child(4) {
   animation-delay: 270ms;
+}
+
+.hero-copy::after {
+  animation: signalSweep 9s ease-in-out infinite alternate;
+  background:
+    linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.18), transparent),
+    radial-gradient(circle at 82% 18%, rgba(34, 197, 94, 0.18), transparent 18rem),
+    radial-gradient(circle at 20% 86%, rgba(20, 184, 166, 0.1), transparent 16rem);
+  content: "";
+  height: 100%;
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+.trust-strip {
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.trust-strip span {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.24);
+  border-radius: 999px;
+  color: #bbf7d0;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 8px 10px;
+}
+
+.mission-example-card,
+.simple-help-card {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.mission-example-card h2,
+.simple-help-card h2,
+.agent-intro h1 {
+  font-size: clamp(30px, 4vw, 50px);
+  letter-spacing: -0.055em;
+  line-height: 1;
+  margin: 8px 0 12px;
+}
+
+.mission-example-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.mission-example-grid div {
+  background: rgba(14, 165, 233, 0.055);
+  border: 1px solid rgba(14, 165, 233, 0.12);
+  border-radius: 14px;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
 }
 
 .hero-visual {
@@ -1196,12 +1298,12 @@ select {
 }
 
 .primary-action-card {
-  border-color: rgba(245, 158, 11, 0.26);
+  border-color: rgba(34, 197, 94, 0.28);
 }
 
 .user-flow-card {
   backdrop-filter: blur(18px);
-  background: rgba(18, 20, 32, 0.64);
+  background: rgba(8, 20, 16, 0.76);
   border: 1px solid var(--line);
   border-radius: 22px;
   display: grid;
@@ -1224,7 +1326,7 @@ select {
 
 .flow-steps div {
   align-items: center;
-  background: rgba(255, 255, 255, 0.045);
+  background: rgba(34, 197, 94, 0.045);
   border: 1px solid var(--line);
   border-radius: 14px;
   display: grid;
@@ -1235,10 +1337,10 @@ select {
 
 .flow-steps b {
   align-items: center;
-  background: rgba(245, 158, 11, 0.16);
-  border: 1px solid rgba(245, 158, 11, 0.28);
+  background: rgba(34, 197, 94, 0.14);
+  border: 1px solid rgba(34, 197, 94, 0.28);
   border-radius: 999px;
-  color: #fbbf24;
+  color: #86efac;
   display: inline-flex;
   height: 32px;
   justify-content: center;
@@ -1251,15 +1353,49 @@ select {
 }
 
 .result-check {
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(10, 24, 19, 0.86);
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 16px;
 }
 
+.find-mission-card {
+  display: grid;
+  margin-bottom: 18px;
+}
+
 .check-form {
   display: grid;
   gap: 10px;
+  margin-top: 12px;
+}
+
+.check-actions,
+.success-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.advanced-options {
+  background: rgba(34, 197, 94, 0.055);
+  border: 1px solid rgba(34, 197, 94, 0.16);
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.advanced-options summary {
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 850;
+  list-style: none;
+}
+
+.advanced-options summary::-webkit-details-marker {
+  display: none;
+}
+
+.advanced-options-grid {
   margin-top: 12px;
 }
 
@@ -1301,6 +1437,10 @@ select {
 
 .agent-tool-grid {
   padding: 0 18px 18px;
+}
+
+.standalone-agent-grid {
+  padding: 18px 0 0;
 }
 
 .form-grid {
@@ -1382,7 +1522,7 @@ select {
 .stat {
   animation: fadeUp 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
   backdrop-filter: blur(18px);
-  background: rgba(18, 20, 32, 0.66);
+  background: rgba(10, 24, 19, 0.76);
   border: 1px solid var(--line);
   border-radius: 18px;
   overflow: hidden;
@@ -1396,7 +1536,7 @@ select {
 
 .stat::after {
   animation: statGlow 4.6s ease-in-out infinite alternate;
-  background: radial-gradient(circle, rgba(34, 211, 238, 0.16), transparent 60%);
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.18), transparent 60%);
   content: "";
   height: 120px;
   position: absolute;
@@ -1406,7 +1546,7 @@ select {
 }
 
 .stat:hover {
-  border-color: rgba(34, 211, 238, 0.28);
+  border-color: rgba(34, 197, 94, 0.28);
   box-shadow: 0 20px 52px rgba(0, 0, 0, 0.22);
   transform: translateY(-3px);
 }
@@ -1449,7 +1589,7 @@ select {
 .row {
   animation: fadeUp 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
   backdrop-filter: blur(16px);
-  background: rgba(18, 20, 32, 0.64);
+  background: rgba(10, 24, 19, 0.76);
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 16px;
@@ -1477,14 +1617,14 @@ select {
 }
 
 .row:hover {
-  background: rgba(24, 27, 42, 0.82);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.16);
-  border-color: rgba(139, 92, 246, 0.28);
+  background: rgba(12, 30, 23, 0.94);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+  border-color: rgba(34, 197, 94, 0.3);
   transform: translateY(-1px);
 }
 
 .latest-row {
-  border-color: rgba(245, 158, 11, 0.22);
+  border-color: rgba(34, 197, 94, 0.26);
 }
 
 .overview-note {
@@ -1507,10 +1647,10 @@ select {
 }
 
 .tag {
-  background: rgba(139, 92, 246, 0.12);
-  border: 1px solid rgba(139, 92, 246, 0.25);
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.22);
   border-radius: 999px;
-  color: #ddd6fe;
+  color: #bbf7d0;
   padding: 6px 9px;
   transition:
     border-color 180ms ease,
@@ -1519,8 +1659,8 @@ select {
 }
 
 .tag:hover {
-  background: rgba(139, 92, 246, 0.17);
-  border-color: rgba(139, 92, 246, 0.38);
+  background: rgba(20, 184, 166, 0.17);
+  border-color: rgba(20, 184, 166, 0.38);
   transform: translateY(-1px);
 }
 
@@ -1540,7 +1680,7 @@ select {
 }
 
 .input {
-  background: #0d0f17;
+  background: rgba(2, 8, 6, 0.72);
   border: 1px solid var(--line);
   border-radius: 12px;
   color: var(--text);
@@ -1564,24 +1704,24 @@ select {
 }
 
 .input:focus {
-  background: rgba(13, 15, 23, 0.96);
-  border-color: rgba(34, 211, 238, 0.55);
-  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.09);
+  background: rgba(2, 8, 6, 0.9);
+  border-color: rgba(34, 197, 94, 0.55);
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
   outline: none;
   transform: translateY(-1px);
 }
 
 .notice {
-  border: 1px solid rgba(34, 211, 238, 0.25);
+  border: 1px solid rgba(34, 197, 94, 0.25);
   border-radius: 16px;
-  color: #a5f3fc;
+  color: #bbf7d0;
   line-height: 1.55;
   padding: 14px;
 }
 
 .analysis-box {
-  background: rgba(34, 211, 238, 0.06);
-  border: 1px solid rgba(34, 211, 238, 0.2);
+  background: rgba(34, 197, 94, 0.06);
+  border: 1px solid rgba(34, 197, 94, 0.2);
   border-radius: 16px;
   display: grid;
   gap: 10px;
@@ -1652,8 +1792,122 @@ select {
 }
 
 .link-list a {
-  color: #a5f3fc;
+  color: #99f6e4;
   overflow-wrap: anywhere;
+}
+
+.open-missions {
+  margin-top: 26px;
+}
+
+.mission-card-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mission-preview-card {
+  background: rgba(10, 24, 19, 0.78);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.2);
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.mission-preview-card h3 {
+  letter-spacing: -0.035em;
+  margin: 0;
+}
+
+.mission-preview-meta {
+  color: var(--muted);
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+}
+
+.footer {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin-top: 42px;
+  padding-top: 24px;
+}
+
+.footer p {
+  margin: 5px 0 0;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.footer-links a,
+.footer-links span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.agent-intro {
+  margin-bottom: 18px;
+}
+
+.mission-list-shell {
+  display: grid;
+  gap: 14px;
+}
+
+.mission-filters {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 220px) minmax(0, 220px) 1fr;
+}
+
+.wallet-pill {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  border-radius: 14px;
+  color: #bbf7d0;
+  font-weight: 800;
+  padding: 12px 13px;
+}
+
+.mission-list {
+  display: grid;
+  gap: 12px;
+}
+
+.mission-list-card {
+  align-items: center;
+  background: rgba(10, 24, 19, 0.78);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr auto;
+  padding: 18px;
+}
+
+.mission-list-card h3 {
+  letter-spacing: -0.035em;
+  margin: 0 0 6px;
+}
+
+.mission-list-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
 }
 
 @media (max-width: 880px) {
@@ -1661,6 +1915,9 @@ select {
   .grid,
   .user-flow-card,
   .detail-grid,
+  .mission-card-grid,
+  .mission-filters,
+  .mission-list-card,
   .two,
   .three,
   .scenario-grid,
@@ -1675,10 +1932,30 @@ select {
     gap: 16px;
   }
 
+  .nav-links {
+    justify-content: flex-start;
+  }
+
   .hero-copy,
   .orbit-card,
   .hero-visual {
-    min-height: 460px;
+    min-height: auto;
+  }
+
+  .hero-actions,
+  .check-actions,
+  .success-actions,
+  .mission-list-meta,
+  .footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .hero-actions .btn,
+  .check-actions .btn,
+  .success-actions .btn {
+    text-align: center;
+    width: 100%;
   }
 
   .feature-strip {
@@ -1954,6 +2231,18 @@ select {
 
   50% {
     transform: scale(1.32);
+  }
+}
+
+@keyframes signalSweep {
+  from {
+    opacity: 0.46;
+    transform: translateX(-18px);
+  }
+
+  to {
+    opacity: 0.72;
+    transform: translateX(18px);
   }
 }
 
