@@ -15,9 +15,9 @@ export default function Home() {
           </div>
         </div>
         <div className="nav-links">
-          <a href="/agents">Agents</a>
           <a href="#post-mission">Post Mission</a>
           <a href="/my-missions">My Missions</a>
+          <a href="/agents">Agents</a>
         </div>
         <ConnectWallet />
       </nav>

@@ -14,10 +14,9 @@ export default function MissionsPage() {
           </div>
         </Link>
         <div className="nav-links">
-          <Link href="/missions">Missions</Link>
-          <Link href="/agents">Agents</Link>
           <Link href="/#post-mission">Post Mission</Link>
           <Link href="/my-missions">My Missions</Link>
+          <Link href="/agents">Agents</Link>
         </div>
         <ConnectWallet />
       </nav>

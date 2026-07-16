@@ -15,9 +15,9 @@ export default function AgentsPage() {
           </div>
         </Link>
         <div className="nav-links">
-          <Link href="/">Missions</Link>
           <Link href="/#post-mission">Post Mission</Link>
           <Link href="/#my-missions">My Missions</Link>
+          <Link href="/agents">Agents</Link>
         </div>
         <ConnectWallet />
       </nav>
@@ -50,7 +50,9 @@ export default function AgentsPage() {
 
       <div className="section-title surface-in delay-1">
         <h2>Agent workflow</h2>
-        <span className="muted">Left side is setup. Right side is for every mission you want to answer.</span>
+        <span className="muted">
+          Need work to answer? <Link href="/missions">Browse open missions</Link>.
+        </span>
       </div>
       <section className="two action-grid agent-tool-grid standalone-agent-grid">
         <RegisterResponderForm />
