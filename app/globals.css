@@ -1715,6 +1715,12 @@ select {
   font-size: 13px;
 }
 
+.field-hint {
+  color: #bbf7d0;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .input {
   background: rgba(2, 8, 6, 0.72);
   border: 1px solid var(--line);

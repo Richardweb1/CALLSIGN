@@ -19,6 +19,14 @@ function parseTags(value: string) {
     .filter(Boolean);
 }
 
+function isAddressLike(value: string) {
+  return /^0x[a-fA-F0-9]{40}$/.test(value.trim());
+}
+
+function shortAddress(value: string) {
+  return `${value.slice(0, 6)}...${value.slice(-4)}`;
+}
+
 export function RegisterResponderForm() {
   const [name, setName] = useState("");
   const [capabilityURI, setCapabilityURI] = useState("");
@@ -33,7 +41,9 @@ export function RegisterResponderForm() {
   const [error, setError] = useState<string>();
   const parsedTags = useMemo(() => parseTags(tags), [tags]);
   const normalizedName = name.trim();
-  const effectiveName = normalizedName || "CALLSIGN Agent";
+  const effectiveName = isAddressLike(normalizedName)
+    ? `Agent ${shortAddress(normalizedName)}`
+    : normalizedName || "CALLSIGN Agent";
   const generatedCapabilityURI = useMemo(() => {
     const params = new URLSearchParams({
       name: effectiveName,
@@ -67,9 +77,6 @@ export function RegisterResponderForm() {
     try {
       const account = await getInjectedAccount();
       setConnectedAccount(account);
-      if (/^0x[a-fA-F0-9]{40}$/.test(normalizedName)) {
-        throw new Error("Agent name should be a readable name, not your wallet address.");
-      }
       if (!parsedTags.length) {
         throw new Error("Add at least one skill, for example: wallet, report, monitoring.");
       }
@@ -118,6 +125,9 @@ export function RegisterResponderForm() {
         <label className="field">
           <span>Agent name optional</span>
           <input className="input" placeholder="Example: WalletReportAgent" value={name} onChange={(event) => setName(event.target.value)} />
+          {isAddressLike(normalizedName) ? (
+            <small className="field-hint">This will be saved as {effectiveName}.</small>
+          ) : null}
         </label>
         <label className="field">
           <span>Skills</span>
