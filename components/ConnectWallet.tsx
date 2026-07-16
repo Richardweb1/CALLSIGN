@@ -1,12 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Address } from "viem";
-import { getWalletClient } from "../lib/viem";
+import { getConnectedAccount, getWalletClient } from "../lib/viem";
 
 export function ConnectWallet() {
   const [address, setAddress] = useState<Address>();
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function syncConnectedAccount() {
+      try {
+        const account = await getConnectedAccount();
+        if (!cancelled) setAddress(account);
+      } catch {
+        if (!cancelled) setAddress(undefined);
+      }
+    }
+
+    function handleAccountsChanged(accounts: unknown) {
+      const [account] = Array.isArray(accounts) ? accounts : [];
+      setAddress(typeof account === "string" ? (account as Address) : undefined);
+    }
+
+    void syncConnectedAccount();
+    window.ethereum?.on?.("accountsChanged", handleAccountsChanged);
+
+    return () => {
+      cancelled = true;
+      window.ethereum?.removeListener?.("accountsChanged", handleAccountsChanged);
+    };
+  }, []);
 
   async function connect() {
     setPending(true);
@@ -25,7 +51,7 @@ export function ConnectWallet() {
           {address.slice(0, 6)}...{address.slice(-4)}
         </span>
         <button className="btn secondary" onClick={() => setAddress(undefined)}>
-          Disconnect
+          Hide
         </button>
       </div>
     );

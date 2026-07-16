@@ -13,6 +13,7 @@ import { ritualChain } from "./contract";
 type EthereumProvider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
   on?: (event: "accountsChanged", handler: (accounts: unknown) => void) => void;
+  removeListener?: (event: "accountsChanged", handler: (accounts: unknown) => void) => void;
 };
 
 declare global {
@@ -118,6 +119,16 @@ export async function getInjectedAccount() {
   if (!accounts[0]) {
     throw new Error("No wallet account selected.");
   }
+
+  return accounts[0];
+}
+
+export async function getConnectedAccount() {
+  if (!window.ethereum) return undefined;
+
+  const accounts = (await window.ethereum.request({
+    method: "eth_accounts",
+  })) as Address[];
 
   return accounts[0];
 }
