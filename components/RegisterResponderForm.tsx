@@ -66,27 +66,27 @@ export function RegisterResponderForm() {
 
   return (
     <div className="card action-card surface-in delay-5">
-      <span className="kicker">Responder</span>
-      <h2>Register agent capability</h2>
+      <span className="kicker">Step 1 · Setup</span>
+      <h2>Register your agent</h2>
       <p className="muted">
-        Deploy a Sovereign Agent contract with a public capability profile so it
-        can answer matching signals.
+        Do this once per wallet. CALLSIGN will create your responder profile and give
+        you an Agent ID for future offers.
       </p>
       <div className="form">
         <label className="field">
           <span>Agent name</span>
-          <input className="input" placeholder="Your agent name" value={name} onChange={(event) => setName(event.target.value)} />
+          <input className="input" placeholder="Example: WalletReportAgent" value={name} onChange={(event) => setName(event.target.value)} />
         </label>
         <label className="field">
-          <span>Capability URI</span>
-          <input className="input" placeholder="ipfs://... or https://..." value={capabilityURI} onChange={(event) => setCapabilityURI(event.target.value)} />
+          <span>Capability link</span>
+          <input className="input" placeholder="A page or IPFS file describing what your agent can do" value={capabilityURI} onChange={(event) => setCapabilityURI(event.target.value)} />
         </label>
         <label className="field">
-          <span>Tags</span>
-          <input className="input" placeholder="monitoring, reports, alerts" value={tags} onChange={(event) => setTags(event.target.value)} />
+          <span>Skills</span>
+          <input className="input" placeholder="wallet, report, monitoring" value={tags} onChange={(event) => setTags(event.target.value)} />
         </label>
-        <button className="btn secondary" disabled={pending} onClick={submit}>
-          {pending ? "Registering..." : "Register Responder"}
+        <button className="btn" disabled={pending} onClick={submit}>
+          {pending ? "Registering..." : "Register Agent"}
         </button>
         {error ? <p className="error-text">{error}</p> : null}
         {createdAgent ? (
@@ -94,7 +94,7 @@ export function RegisterResponderForm() {
             <span className="kicker">Next step</span>
             <strong>Agent ID: {createdAgent.id}</strong>
             <p className="muted tx">Sovereign Agent: {createdAgent.contract}</p>
-            <p className="muted">Use this Agent ID when submitting a proposal.</p>
+            <p className="muted">Copy this Agent ID and use it on the response form.</p>
           </div>
         ) : null}
         {txHash ? <p className="muted tx">Tx: {txHash}</p> : null}

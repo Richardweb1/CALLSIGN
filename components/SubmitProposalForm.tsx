@@ -186,24 +186,29 @@ export function SubmitProposalForm({ signalContext }: { signalContext?: Proposal
 
   return (
     <div className="card action-card surface-in delay-6">
-      <span className="kicker">Respond</span>
-      <h2>Submit agent response</h2>
+      <span className="kicker">Step 2 · Offer</span>
+      <h2>Answer a mission</h2>
       <p className="muted">
-        Agents answer with a plan, permission scope, price, ETA, and risk level.
+        Paste the Mission ID and your Agent ID. Ritual analysis can draft the plan,
+        permissions, risk, price, and ETA before you submit.
       </p>
+      <div className="mini-help">
+        <span>Mission ID comes from the mission page.</span>
+        <span>Agent ID comes from Step 1 after registration.</span>
+      </div>
       <div className="form compact-form">
         <div className="form-grid">
           <label className="field">
-            <span>Signal ID</span>
-            <input className="input" placeholder="Signal ID" value={signalId} onChange={(event) => setSignalId(event.target.value)} />
+            <span>Mission ID</span>
+            <input className="input" placeholder="Example: 8" value={signalId} onChange={(event) => setSignalId(event.target.value)} />
           </label>
           <label className="field">
             <span>Agent ID</span>
-            <input className="input" placeholder="Agent ID" value={agentId} onChange={(event) => setAgentId(event.target.value)} />
+            <input className="input" placeholder="Example: 7" value={agentId} onChange={(event) => setAgentId(event.target.value)} />
           </label>
         </div>
         <button className="btn secondary" disabled={analysisPending || !signalId} onClick={analyzeSignal}>
-          {analysisPending ? "Analyzing..." : "Analyze with Ritual LLM"}
+          {analysisPending ? "Analyzing..." : "Draft Offer with Ritual"}
         </button>
         {analysisDraft ? (
           <div className="analysis-box">
@@ -230,16 +235,16 @@ export function SubmitProposalForm({ signalContext }: { signalContext?: Proposal
           </div>
         ) : null}
         <label className="field">
-          <span>Plan URI</span>
-          <input className="input" placeholder="ipfs://... or https://..." value={planURI} onChange={(event) => setPlanURI(event.target.value)} />
+          <span>Plan link</span>
+          <input className="input" placeholder="Use Ritual draft or paste your plan link" value={planURI} onChange={(event) => setPlanURI(event.target.value)} />
         </label>
         <label className="field">
-          <span>Permission URI</span>
-          <input className="input" placeholder="ipfs://... or https://..." value={permissionURI} onChange={(event) => setPermissionURI(event.target.value)} />
+          <span>Permission link</span>
+          <input className="input" placeholder="Use Ritual draft or paste permission scope link" value={permissionURI} onChange={(event) => setPermissionURI(event.target.value)} />
         </label>
         <div className="form-grid">
           <label className="field">
-            <span>Risk 1-5</span>
+            <span>Risk level 1-5</span>
             <input className="input" placeholder="1" value={riskLevel} onChange={(event) => setRiskLevel(event.target.value)} />
           </label>
           <label className="field">
@@ -251,12 +256,19 @@ export function SubmitProposalForm({ signalContext }: { signalContext?: Proposal
             <input className="input" placeholder="24" value={etaHours} onChange={(event) => setEtaHours(event.target.value)} />
           </label>
         </div>
-        <button className="btn secondary" disabled={pending} onClick={submit}>
-          {pending ? "Submitting..." : "Submit Response"}
-        </button>
         <button className="btn agent-btn" disabled={agentPending} onClick={submitViaSovereignAgent}>
-          {agentPending ? "Agent proposing..." : "Propose via Sovereign Agent"}
+          {agentPending ? "Submitting offer..." : "Submit Offer via Agent"}
         </button>
+        <details className="advanced-options">
+          <summary>Technical fallback</summary>
+          <p className="muted">
+            Use this only if the sovereign agent route is unavailable. Most agents should use
+            the main offer button above.
+          </p>
+          <button className="btn secondary" disabled={pending} onClick={submit}>
+            {pending ? "Submitting..." : "Submit Direct Response"}
+          </button>
+        </details>
         {error ? <p className="error-text">{error}</p> : null}
         {createdProposalId ? (
           <div className="success-box">

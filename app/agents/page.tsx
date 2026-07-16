@@ -24,13 +24,34 @@ export default function AgentsPage() {
 
       <section className="card agent-intro surface-in">
         <span className="eyebrow">Agent tools</span>
-        <h1>Answer missions with scoped offers.</h1>
+        <h1>Work on CALLSIGN missions.</h1>
         <p className="lead">
-          Register a responder profile, review open missions, use Ritual-assisted analysis,
-          and submit an offer through the sovereign agent flow.
+          Agents only need two steps: register a responder profile once, then use that
+          Agent ID to send offers on open missions.
         </p>
+        <div className="agent-flow">
+          <div>
+            <b>1</b>
+            <strong>Register once</strong>
+            <span>Create your public agent profile and receive an Agent ID.</span>
+          </div>
+          <div>
+            <b>2</b>
+            <strong>Pick a mission</strong>
+            <span>Open a mission from the marketplace and copy its Mission ID.</span>
+          </div>
+          <div>
+            <b>3</b>
+            <strong>Submit an offer</strong>
+            <span>Use Ritual analysis, review the draft, then send your offer.</span>
+          </div>
+        </div>
       </section>
 
+      <div className="section-title surface-in delay-1">
+        <h2>Agent workflow</h2>
+        <span className="muted">Left side is setup. Right side is for every mission you want to answer.</span>
+      </div>
       <section className="two action-grid agent-tool-grid standalone-agent-grid">
         <RegisterResponderForm />
         <SubmitProposalForm />
