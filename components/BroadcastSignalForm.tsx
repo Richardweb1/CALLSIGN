@@ -52,12 +52,6 @@ export function BroadcastSignalForm() {
   const referenceCode = createdSignalId
     ? makeSignalReference(createdSignalId, createdIpfsUri)
     : "";
-  const deadlineSeconds = useMemo(() => {
-    if (offerDeadline === "24 hours") return BigInt(Math.floor(Date.now() / 1000) + 24 * 60 * 60);
-    if (offerDeadline === "3 days") return BigInt(Math.floor(Date.now() / 1000) + 3 * 24 * 60 * 60);
-    if (offerDeadline === "7 days") return BigInt(Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60);
-    return 0n;
-  }, [offerDeadline]);
 
   async function submit() {
     setPending(true);
@@ -67,6 +61,9 @@ export function BroadcastSignalForm() {
       setCreatedSignalId(undefined);
       setCreatedIpfsUri(undefined);
       const missionTags = Array.from(new Set([category.toLowerCase(), ...parsedTags]));
+      const missionCapabilities = parsedCapabilities.length
+        ? parsedCapabilities
+        : [category.toLowerCase(), "agent response"];
 
       setProgress("Uploading mission details");
       const uploadResponse = await fetch("/api/ipfs/upload", {
@@ -80,7 +77,7 @@ export function BroadcastSignalForm() {
           urgency,
           tags: missionTags,
           location,
-          requestedCapabilities: parsedCapabilities,
+          requestedCapabilities: missionCapabilities,
           evidenceLinks: parsedEvidence,
           extraInstructions,
           budget,
@@ -96,7 +93,7 @@ export function BroadcastSignalForm() {
         uploadResult.ipfsUri as string,
         missionTags,
         parseEther(budget || "0"),
-        deadlineSeconds,
+        0n,
       ] as const;
       setProgress("Creating on-chain signal");
       const hash = await sendLegacyContractTransaction({
@@ -136,18 +133,23 @@ export function BroadcastSignalForm() {
         Mission details may be publicly accessible. Do not include passwords, private keys,
         credentials, personal data, or confidential files.
       </p>
+      <div className="submit-steps" aria-label="Mission submit steps">
+        <span><b>1</b> Describe mission</span>
+        <span><b>2</b> Set budget</span>
+        <span><b>3</b> Post on Ritual</span>
+      </div>
       <div className="form">
         <label className="field">
-          <span>Mission title</span>
+          <span>1. What do you need?</span>
           <input className="input" placeholder="Example: Review my smart contract" value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
         <label className="field">
-          <span>Mission description</span>
+          <span>Describe the result you expect</span>
           <textarea className="input textarea" placeholder="Describe the task, expected result, and any important requirements." value={description} onChange={(event) => setDescription(event.target.value)} />
         </label>
         <div className="form-grid">
           <label className="field">
-            <span>Category</span>
+            <span>2. Mission type</span>
             <select className="input" value={category} onChange={(event) => setCategory(event.target.value)}>
               <option>Research</option>
               <option>Development</option>
@@ -158,7 +160,7 @@ export function BroadcastSignalForm() {
             </select>
           </label>
           <label className="field">
-            <span>Offer deadline</span>
+            <span>Offer window</span>
             <select className="input" value={offerDeadline} onChange={(event) => setOfferDeadline(event.target.value)}>
               <option>24 hours</option>
               <option>3 days</option>
@@ -168,11 +170,11 @@ export function BroadcastSignalForm() {
           </label>
         </div>
         <label className="field">
-          <span>Budget in RITUAL</span>
+          <span>3. Budget in RITUAL</span>
           <input className="input" placeholder="0.1" value={budget} onChange={(event) => setBudget(event.target.value)} />
         </label>
         <details className="advanced-options">
-          <summary>Advanced Options</summary>
+          <summary>Optional details for better agent offers</summary>
           <div className="form advanced-options-grid">
             <div className="form-grid">
               <label className="field">
