@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { parseEventLogs } from "viem";
+import { useEffect, useMemo, useState } from "react";
+import { parseEventLogs, type Address } from "viem";
 import { callsignAbi } from "../lib/callsignAbi";
 import { callsignAddress } from "../lib/contract";
 import {
+  getConnectedAccount,
   getInjectedAccount,
   getTransactionErrorMessage,
   sendLegacyContractTransaction,
@@ -22,6 +23,7 @@ export function RegisterResponderForm() {
   const [name, setName] = useState("");
   const [capabilityURI, setCapabilityURI] = useState("");
   const [tags, setTags] = useState("");
+  const [connectedAccount, setConnectedAccount] = useState<Address>();
   const [pending, setPending] = useState(false);
   const [txHash, setTxHash] = useState<string>();
   const [createdAgent, setCreatedAgent] = useState<{
@@ -30,13 +32,48 @@ export function RegisterResponderForm() {
   }>();
   const [error, setError] = useState<string>();
   const parsedTags = useMemo(() => parseTags(tags), [tags]);
+  const normalizedName = name.trim();
+  const effectiveName = normalizedName || "CALLSIGN Agent";
+  const generatedCapabilityURI = useMemo(() => {
+    const params = new URLSearchParams({
+      name: effectiveName,
+      skills: parsedTags.join(", ") || "general agent response",
+    });
+    return `https://callsignritual.vercel.app/demo/agent/capability?${params.toString()}`;
+  }, [effectiveName, parsedTags]);
+  const effectiveCapabilityURI = capabilityURI.trim() || generatedCapabilityURI;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAccount() {
+      try {
+        const account = await getConnectedAccount();
+        if (!cancelled) setConnectedAccount(account);
+      } catch {
+        if (!cancelled) setConnectedAccount(undefined);
+      }
+    }
+
+    void loadAccount();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function submit() {
     setPending(true);
     setError(undefined);
     try {
       const account = await getInjectedAccount();
-      const args = [account, name, capabilityURI, parsedTags] as const;
+      setConnectedAccount(account);
+      if (/^0x[a-fA-F0-9]{40}$/.test(normalizedName)) {
+        throw new Error("Agent name should be a readable name, not your wallet address.");
+      }
+      if (!parsedTags.length) {
+        throw new Error("Add at least one skill, for example: wallet, report, monitoring.");
+      }
+      const args = [account, effectiveName, effectiveCapabilityURI, parsedTags] as const;
       setCreatedAgent(undefined);
       const hash = await sendLegacyContractTransaction({
           address: callsignAddress,
@@ -72,19 +109,30 @@ export function RegisterResponderForm() {
         Do this once per wallet. CALLSIGN will create your responder profile and give
         you an Agent ID for future offers.
       </p>
+      <div className="mini-help single-help">
+        <span>
+          Owner wallet: {connectedAccount ? `${connectedAccount.slice(0, 6)}...${connectedAccount.slice(-4)}` : "Connect wallet first"}
+        </span>
+      </div>
       <div className="form">
         <label className="field">
-          <span>Agent name</span>
+          <span>Agent name optional</span>
           <input className="input" placeholder="Example: WalletReportAgent" value={name} onChange={(event) => setName(event.target.value)} />
-        </label>
-        <label className="field">
-          <span>Capability link</span>
-          <input className="input" placeholder="A page or IPFS file describing what your agent can do" value={capabilityURI} onChange={(event) => setCapabilityURI(event.target.value)} />
         </label>
         <label className="field">
           <span>Skills</span>
           <input className="input" placeholder="wallet, report, monitoring" value={tags} onChange={(event) => setTags(event.target.value)} />
         </label>
+        <details className="advanced-options">
+          <summary>Optional capability link</summary>
+          <p className="muted">
+            Leave this empty and CALLSIGN will generate a simple public capability link from your skills.
+          </p>
+          <label className="field">
+            <span>Capability link</span>
+            <input className="input" placeholder={generatedCapabilityURI} value={capabilityURI} onChange={(event) => setCapabilityURI(event.target.value)} />
+          </label>
+        </details>
         <button className="btn" disabled={pending} onClick={submit}>
           {pending ? "Registering..." : "Register Agent"}
         </button>

@@ -1944,6 +1944,10 @@ select {
   margin: 14px 0;
 }
 
+.single-help {
+  grid-template-columns: 1fr;
+}
+
 .mission-list-shell {
   display: grid;
   gap: 14px;
