@@ -207,7 +207,7 @@ export async function sendLegacyTransaction({
   await ensureRitualChain();
 
   const account = await getInjectedAccount();
-  const [estimatedGas, gasPrice] = await Promise.all([
+  const [estimatedGas, fees] = await Promise.all([
     gas
       ? Promise.resolve(gas)
       : publicClient.estimateGas({
@@ -216,7 +216,7 @@ export async function sendLegacyTransaction({
           data,
           value,
         }),
-    publicClient.getGasPrice(),
+    publicClient.estimateFeesPerGas(),
   ]);
 
   return (await window.ethereum.request({
@@ -228,7 +228,10 @@ export async function sendLegacyTransaction({
         data,
         value: value !== undefined ? toHex(value) : undefined,
         gas: toHex(estimatedGas),
-        gasPrice: toHex(gasPrice),
+        maxFeePerGas: fees.maxFeePerGas ? toHex(fees.maxFeePerGas) : undefined,
+        maxPriorityFeePerGas: fees.maxPriorityFeePerGas
+          ? toHex(fees.maxPriorityFeePerGas)
+          : undefined,
       },
     ],
   })) as `0x${string}`;
