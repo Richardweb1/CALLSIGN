@@ -5,7 +5,6 @@ import { formatEther, parseAbiItem, parseEther, parseEventLogs, type Address } f
 import { callsignAbi } from "../lib/callsignAbi";
 import { callsignAddress } from "../lib/contract";
 import { decodeRitualLlmCompletion, extractRitualLlmResult } from "../lib/ritualLlm";
-import { ritualWalletAbi, ritualWalletAddress } from "../lib/ritualWallet";
 import { sovereignAgentAbi } from "../lib/sovereignAgentAbi";
 import {
   getConnectedAccount,
@@ -67,8 +66,6 @@ export function SubmitProposalForm({
   const [ownedAgentIds, setOwnedAgentIds] = useState<string[]>([]);
   const [agentLookupPending, setAgentLookupPending] = useState(false);
   const [connectedAccount, setConnectedAccount] = useState<Address>();
-  const [ritualWalletBalance, setRitualWalletBalance] = useState<bigint>();
-  const [depositPending, setDepositPending] = useState(false);
   const [planURI, setPlanURI] = useState("");
   const [permissionURI, setPermissionURI] = useState("");
   const [riskLevel, setRiskLevel] = useState("");
@@ -141,21 +138,6 @@ export function SubmitProposalForm({
       cancelled = true;
     };
   }, [agentId]);
-
-  async function refreshRitualWalletBalance(account = connectedAccount) {
-    if (!account) return;
-    const balance = await publicClient.readContract({
-      address: ritualWalletAddress,
-      abi: ritualWalletAbi,
-      functionName: "balanceOf",
-      args: [account],
-    });
-    setRitualWalletBalance(balance);
-  }
-
-  useEffect(() => {
-    if (connectedAccount) void refreshRitualWalletBalance(connectedAccount);
-  }, [connectedAccount]);
 
   async function resolveSignalContext() {
     if (signalContext?.metadata) return signalContext;
@@ -235,34 +217,45 @@ export function SubmitProposalForm({
   }
 
   async function runRitualPrecompile(ritualTransaction: RitualTransaction, fallbackDraft: AnalysisDraft) {
-    if (ritualWalletBalance !== undefined && ritualWalletBalance < parseEther("0.005")) {
-      throw new Error("Deposit RITUAL into RitualWallet first so the LLM executor fee can be paid.");
-    }
-
     setAnalysisWarning("Wallet will send a real Ritual LLM precompile transaction to 0x0802.");
-    const hash = await sendLegacyTransaction({
-      to: ritualTransaction.to,
-      data: ritualTransaction.data,
-      gas: BigInt(ritualTransaction.gas),
-    });
-    setRitualTxHash(hash);
-    const receipt = await waitForTransaction(hash);
-    const resultHex = extractRitualLlmResult(receipt);
-    if (!resultHex) {
-      throw new Error("Ritual LLM transaction settled without a decoded precompile result. Check the explorer and try again after settlement.");
+    try {
+      const hash = await sendLegacyTransaction({
+        to: ritualTransaction.to,
+        data: ritualTransaction.data,
+        gas: BigInt(ritualTransaction.gas),
+      });
+      setRitualTxHash(hash);
+      const receipt = await waitForTransaction(hash);
+      const resultHex = extractRitualLlmResult(receipt);
+      if (!resultHex) {
+        throw new Error("Ritual LLM transaction settled without a decoded result.");
+      }
+
+      const completion = decodeRitualLlmCompletion(resultHex);
+      const parsed = JSON.parse(completion.content) as AnalysisDraft;
+      const nextDraft = {
+        ...fallbackDraft,
+        ...parsed,
+        source: "ritual-llm-precompile",
+        ritual: fallbackDraft.ritual,
+        confidence: parsed.confidence || `finish_reason:${completion.finishReason}`,
+      };
+      await finalizeDraft(nextDraft);
+      setAnalysisWarning(`Ritual LLM executed on-chain. Model: ${completion.model}.`);
+    } catch (err) {
+      await finalizeDraft({
+        ...fallbackDraft,
+        source: "ritual-assisted-draft",
+        confidence: "fallback-after-precompile-failure",
+      });
+      setAnalysisWarning(
+        `Real LLM precompile could not complete, so CALLSIGN prepared a safe Ritual-assisted draft instead. ${getTransactionErrorMessage(err)}`,
+      );
     }
+  }
 
-    const completion = decodeRitualLlmCompletion(resultHex);
-    const parsed = JSON.parse(completion.content) as AnalysisDraft;
-    const nextDraft = {
-      ...fallbackDraft,
-      ...parsed,
-      source: "ritual-llm-precompile",
-      ritual: fallbackDraft.ritual,
-      confidence: parsed.confidence || `finish_reason:${completion.finishReason}`,
-    };
+  async function finalizeDraft(nextDraft: AnalysisDraft) {
     setAnalysisDraft(nextDraft);
-
     const uploadResponse = await fetch("/api/ritual/finalize-offer-draft", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -280,27 +273,6 @@ export function SubmitProposalForm({
     if (nextDraft.riskLevel) setRiskLevel(String(nextDraft.riskLevel));
     if (nextDraft.price) setPrice(nextDraft.price);
     if (nextDraft.etaHours) setEtaHours(String(nextDraft.etaHours));
-    setAnalysisWarning(`Ritual LLM executed on-chain. Model: ${completion.model}.`);
-  }
-
-  async function depositForRitualLlm() {
-    setDepositPending(true);
-    setError(undefined);
-    try {
-      const hash = await sendLegacyContractTransaction({
-        address: ritualWalletAddress,
-        abi: ritualWalletAbi,
-        functionName: "deposit",
-        args: [5000n],
-        value: parseEther("0.02"),
-      });
-      await waitForTransaction(hash);
-      await refreshRitualWalletBalance();
-    } catch (err) {
-      setError(getTransactionErrorMessage(err));
-    } finally {
-      setDepositPending(false);
-    }
   }
 
   async function submit() {
@@ -426,20 +398,6 @@ export function SubmitProposalForm({
         {!agentLookupPending && connectedAccount && !ownedAgentIds.length ? (
           <p className="notice">No Agent ID found for this wallet yet. Register once in Step 1, then this field will fill automatically.</p>
         ) : null}
-        <div className="ritual-wallet-box">
-          <div>
-            <span className="kicker">Ritual LLM fee wallet</span>
-            <p className="muted">
-              Balance:{" "}
-              {ritualWalletBalance === undefined
-                ? "checking..."
-                : `${formatEther(ritualWalletBalance)} RITUAL`}
-            </p>
-          </div>
-          <button className="btn secondary" disabled={depositPending} onClick={depositForRitualLlm}>
-            {depositPending ? "Depositing..." : "Deposit 0.02 RITUAL"}
-          </button>
-        </div>
         <button className="btn secondary" disabled={analysisPending || !signalId} onClick={analyzeSignal}>
           {analysisPending ? "Analyzing..." : "Draft Ritual-assisted offer"}
         </button>
