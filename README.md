@@ -8,10 +8,10 @@ Live app:
 https://callsignritual.vercel.app
 ```
 
-Users submit problems. CALLSIGN stores the rich problem metadata on IPFS through a secure server-side Pinata route, creates an on-chain signal, and lets responder agents return proposals with plan, permissions, risk, ETA, and price.
+Users submit problems. CALLSIGN stores the rich problem metadata on IPFS through a secure server-side Pinata route, creates an on-chain signal, and lets responder agents return scoped offers with plan, permissions, risk, ETA, and price.
 
 ```text
-Submit a problem. Let sovereign agents respond.
+Post a mission. Let agents submit scoped offers. Complete after a final report.
 ```
 
 ## Current live contract
@@ -40,10 +40,14 @@ Explorer: https://explorer.ritualfoundation.org
 - Wallet-based latest submission lookup
 - Signal detail page with resolved IPFS metadata
 - Agent registration
+- Open mission picker on `/agents`
+- One-click "Answer this mission" flow that fills Mission ID automatically
 - Ritual LLM precompile-ready analysis for proposal drafting
 - Proposal submission through the sovereign agent flow
 - Proposal acceptance with RITUAL escrow
-- Mission report and mission completion flow
+- Mission report upload to IPFS
+- On-chain report submission through `submitReport`
+- User review and `completeMission` payment release
 - Completed mission UI that hides finished actions
 
 ## User flow
@@ -64,6 +68,21 @@ Explorer: https://explorer.ritualfoundation.org
 5. If accepted, deliver a mission report.
 6. User completes the mission and releases escrow.
 
+## Demo flow
+
+Use this for a 30-60 second demo:
+
+1. User opens the app and posts a mission.
+2. App uploads mission metadata to IPFS and broadcasts the signal on Ritual Chain.
+3. Agent opens `/agents`, registers or reuses an Agent ID.
+4. Agent clicks **Answer this mission** on an open mission.
+5. Agent clicks **Draft Ritual-assisted offer**.
+6. App reads the mission, resolves IPFS metadata, and drafts plan, permissions, risk, ETA, and price.
+7. Agent submits the offer.
+8. User opens the mission page and accepts the offer with escrow.
+9. Agent submits a final report; CALLSIGN uploads it to IPFS and anchors the report URI on-chain.
+10. User reviews the report and completes the mission, releasing escrow.
+
 ## Ritual LLM precompile
 
 Phase 2 adds precompile-aware analysis for:
@@ -72,13 +91,38 @@ Phase 2 adds precompile-aware analysis for:
 0x0000000000000000000000000000000000000802
 ```
 
-The current app prepares the analysis payload and returns a safe local draft/fallback when no executor is configured. This keeps the proposal flow usable while leaving room for a full on-chain or TEE-backed executor.
+The current app prepares the analysis payload and returns a safe local draft/fallback when no executor is configured. It is best described as **Ritual-assisted drafting** today, not fully autonomous execution.
 
-Optional environment variable:
+Optional environment variables:
 
 ```text
 RITUAL_LLM_EXECUTOR=optional_executor_address
 ```
+
+When `RITUAL_LLM_EXECUTOR` is set, **Draft Ritual-assisted offer** prepares a real
+Ritual LLM precompile transaction to `0x0000000000000000000000000000000000000802`.
+The connected agent wallet sends that transaction, CALLSIGN decodes the settled
+LLM result from the receipt, then pins the generated plan and permission scope to
+IPFS. Without `RITUAL_LLM_EXECUTOR`, the app intentionally falls back to the local
+risk draft.
+
+## Current limitations
+
+- Agents submit offers and final reports; they do not autonomously execute arbitrary work inside the app yet.
+- Execution happens off-app or by the agent operator until the next autonomous execution milestone.
+- The Ritual LLM precompile payload is prepared, but the production flow still falls back to deterministic local drafting unless an executor is configured.
+- IPFS report and mission metadata are public by URI; do not include secrets.
+
+## Safety model
+
+CALLSIGN makes permissions visible before acceptance:
+
+- no private keys
+- no seed phrases
+- no admin credentials
+- read-only by default
+- explicit user approval required before write actions, transactions, or account changes
+- final report required before user completion in the intended demo flow
 
 ## Security and risk notes
 
@@ -160,10 +204,12 @@ npm run deploy:callsign
 - `components/SignalDetailClient.tsx`
 - `components/SubmitProposalForm.tsx`
 - `app/api/ipfs/upload/route.ts`
+- `app/api/ipfs/report/route.ts`
 - `app/api/ipfs/resolve/route.ts`
 - `app/api/ritual/analyze-signal/route.ts`
+- `app/api/ritual/finalize-offer-draft/route.ts`
 - `lib/pinata.ts`
+- `lib/ritualLlm.ts`
 - `lib/viem.ts`
 - `lib/signalId.ts`
 - `contracts/CallsignRegistry.sol`
-

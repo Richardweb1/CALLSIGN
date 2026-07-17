@@ -72,6 +72,10 @@ export function SignalDetailClient({ id }: { id: string }) {
   const [error, setError] = useState<string>();
   const [actionPending, setActionPending] = useState<string>();
   const [reportURI, setReportURI] = useState("");
+  const [reportSummary, setReportSummary] = useState("");
+  const [reportWork, setReportWork] = useState("");
+  const [reportEvidenceLinks, setReportEvidenceLinks] = useState("");
+  const [reportLimitations, setReportLimitations] = useState("");
   const [rating, setRating] = useState("5");
   const isMissionActive = mission?.status === 0;
   const isMissionReported = mission?.status === 1;
@@ -169,11 +173,33 @@ export function SignalDetailClient({ id }: { id: string }) {
     setActionPending("report");
     setError(undefined);
     try {
+      let finalReportURI = reportURI.trim();
+      if (!finalReportURI) {
+        const response = await fetch("/api/ipfs/report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            missionId: mission.id.toString(),
+            signalId: mission.signalId.toString(),
+            agentId: mission.agentId.toString(),
+            title: `CALLSIGN mission ${mission.id.toString()} report`,
+            summary: reportSummary,
+            workPerformed: reportWork,
+            evidenceLinks: reportEvidenceLinks,
+            limitations: reportLimitations,
+          }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Unable to upload report.");
+        finalReportURI = result.ipfsUri;
+        setReportURI(finalReportURI);
+      }
+
       const hash = await sendLegacyContractTransaction({
         address: callsignAddress,
         abi: callsignAbi,
         functionName: "submitReport",
-        args: [mission.id, reportURI],
+        args: [mission.id, finalReportURI],
       });
       await waitForTransaction(hash);
       window.location.reload();
@@ -364,6 +390,11 @@ export function SignalDetailClient({ id }: { id: string }) {
                   <strong>#{mission.proposalId.toString()}</strong>
                 </div>
               </div>
+              <div className="mission-stage-strip">
+                <span className={mission.status >= 0 ? "active" : ""}>Offer accepted</span>
+                <span className={mission.status >= 1 && mission.status !== 3 ? "active" : ""}>Report submitted</span>
+                <span className={mission.status === 2 ? "active" : ""}>Completed / paid</span>
+              </div>
               {mission.latestReportURI ? (
                 <p className="muted tx">
                   Latest report:{" "}
@@ -380,7 +411,11 @@ export function SignalDetailClient({ id }: { id: string }) {
                 </div>
               ) : null}
               {isMissionReported ? (
-                <div className="mission-actions">
+                <div className="mission-actions mission-review-panel">
+                  <p className="safety-note">
+                    Review the final report before completing payment. Completing releases escrow
+                    to the accepted agent contract.
+                  </p>
                   <label className="field">
                     <span>User rating 1-5</span>
                     <input
@@ -395,24 +430,64 @@ export function SignalDetailClient({ id }: { id: string }) {
                 </div>
               ) : null}
               {isMissionActive ? (
-                <details className="technical-details responder-detail">
+                <details className="technical-details responder-detail" open>
                   <summary>Agent delivery tools</summary>
-                  <div className="mission-actions">
+                  <div className="report-composer">
+                    <p className="safety-note">
+                      Submit a final report after doing the work off-app. Do not request private
+                      keys, admin credentials, or write access unless the user approved it in the offer.
+                    </p>
                     <label className="field">
-                      <span>Agent report URI</span>
+                      <span>Report summary</span>
+                      <textarea
+                        className="input textarea"
+                        placeholder="Short outcome summary for the user."
+                        value={reportSummary}
+                        onChange={(event) => setReportSummary(event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Work performed</span>
+                      <textarea
+                        className="input textarea"
+                        placeholder="What you checked, changed, delivered, or found."
+                        value={reportWork}
+                        onChange={(event) => setReportWork(event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Evidence links</span>
+                      <textarea
+                        className="input small-textarea"
+                        placeholder="One URL per line, optional."
+                        value={reportEvidenceLinks}
+                        onChange={(event) => setReportEvidenceLinks(event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Limitations or follow-up</span>
+                      <textarea
+                        className="input small-textarea"
+                        placeholder="Anything the user should know before completion."
+                        value={reportLimitations}
+                        onChange={(event) => setReportLimitations(event.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Existing report URI</span>
                       <input
                         className="input"
-                        placeholder="ipfs://... or https://..."
+                        placeholder="Optional: paste ipfs://... instead of generating a report"
                         value={reportURI}
                         onChange={(event) => setReportURI(event.target.value)}
                       />
                     </label>
                     <button
                       className="btn secondary"
-                      disabled={Boolean(actionPending) || !reportURI}
+                      disabled={Boolean(actionPending) || (!reportURI && (!reportSummary || !reportWork))}
                       onClick={submitMissionReport}
                     >
-                      {actionPending === "report" ? "Submitting report..." : "Submit mission report"}
+                      {actionPending === "report" ? "Submitting report..." : "Upload report and submit on-chain"}
                     </button>
                   </div>
                 </details>

@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
-import { encodeAbiParameters, parseAbiParameters } from "viem";
 import { pinJsonToIpfs } from "../../../../lib/pinata";
-
-const LLM_PRECOMPILE = "0x0000000000000000000000000000000000000802";
-const RITUAL_MODEL = "zai-org/GLM-4.7-FP8";
+import {
+  LLM_PRECOMPILE,
+  RITUAL_MODEL,
+  encodeJsonResponseFormat,
+  encodeRitualLlmRequest,
+} from "../../../../lib/ritualLlm";
 
 type AnalyzeRequest = {
   signalId?: unknown;
@@ -93,47 +95,29 @@ function buildPrompt(input: {
   ];
 }
 
+const offerDraftSchema = {
+  type: "object",
+  properties: {
+    plan: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 5 },
+    permissions: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 5 },
+    riskLevel: { type: "integer", minimum: 1, maximum: 5 },
+    etaHours: { type: "integer", minimum: 1, maximum: 720 },
+    price: { type: "string" },
+    confidence: { type: "string" },
+  },
+  required: ["plan", "permissions", "riskLevel", "etaHours", "price", "confidence"],
+  additionalProperties: false,
+};
+
 function encodeRitualLlmInput(messages: unknown[]) {
   const executor = process.env.RITUAL_LLM_EXECUTOR as `0x${string}` | undefined;
   if (!executor) return undefined;
 
-  return encodeAbiParameters(
-    parseAbiParameters(
-      "address, bytes[], uint256, bytes[], bytes, string, string, int256, string, bool, int256, string, string, uint256, bool, int256, string, bytes, int256, string, string, bool, int256, bytes, bytes, int256, int256, string, bool, (string,string,string)",
-    ),
-    [
-      executor,
-      [],
-      30n,
-      [],
-      "0x",
-      JSON.stringify(messages),
-      RITUAL_MODEL,
-      0n,
-      "",
-      false,
-      -1n,
-      "",
-      "",
-      1n,
-      false,
-      0n,
-      "",
-      "0x",
-      -1n,
-      "",
-      "",
-      false,
-      300n,
-      "0x",
-      "0x",
-      -1n,
-      1000n,
-      "callsign",
-      false,
-      ["", "", ""],
-    ],
-  );
+  return encodeRitualLlmRequest({
+    executor,
+    messages,
+    responseFormatData: encodeJsonResponseFormat(offerDraftSchema),
+  });
 }
 
 export async function POST(request: Request) {
@@ -186,6 +170,7 @@ export async function POST(request: Request) {
         chainId: 1979,
         precompile: LLM_PRECOMPILE,
         model: RITUAL_MODEL,
+        executor: process.env.RITUAL_LLM_EXECUTOR,
         encodedLlmInput,
       },
       signalId,
@@ -195,13 +180,24 @@ export async function POST(request: Request) {
       riskLevel,
       etaHours,
       price,
-      confidence: encodedLlmInput ? "ready-for-on-chain-llm-execution" : "heuristic-until-executor-configured",
+      confidence: encodedLlmInput ? "requires-wallet-precompile-transaction" : "heuristic-until-executor-configured",
       assumptions: [
         "The agent will review this draft before submitting a transaction.",
         "Permissions stay read-only unless the signal owner approves more access.",
       ],
       createdAt: new Date().toISOString(),
     };
+
+    if (encodedLlmInput) {
+      return NextResponse.json({
+        draft,
+        ritualTransaction: {
+          to: LLM_PRECOMPILE,
+          data: encodedLlmInput,
+          gas: "5000000",
+        },
+      });
+    }
 
     let planURI: string | undefined;
     let permissionURI: string | undefined;

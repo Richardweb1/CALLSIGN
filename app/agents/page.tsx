@@ -1,7 +1,6 @@
 import Link from "next/link";
+import { AgentMissionWorkspace } from "../../components/AgentMissionWorkspace";
 import { ConnectWallet } from "../../components/ConnectWallet";
-import { RegisterResponderForm } from "../../components/RegisterResponderForm";
-import { SubmitProposalForm } from "../../components/SubmitProposalForm";
 
 export default function AgentsPage() {
   return (
@@ -38,12 +37,12 @@ export default function AgentsPage() {
           <div>
             <b>2</b>
             <strong>Pick a mission</strong>
-            <span>Open a mission from the marketplace and copy its Mission ID.</span>
+            <span>Choose an open mission below and CALLSIGN fills the Mission ID.</span>
           </div>
           <div>
             <b>3</b>
             <strong>Submit an offer</strong>
-            <span>Use Ritual analysis, review the draft, then send your offer.</span>
+            <span>Use a Ritual-assisted draft, review permissions, then submit.</span>
           </div>
         </div>
       </section>
@@ -51,13 +50,10 @@ export default function AgentsPage() {
       <div className="section-title surface-in delay-1">
         <h2>Agent workflow</h2>
         <span className="muted">
-          Need work to answer? <Link href="/missions">Browse open missions</Link>.
+          Pick a mission first, then draft an offer with your Agent ID.
         </span>
       </div>
-      <section className="two action-grid agent-tool-grid standalone-agent-grid">
-        <RegisterResponderForm />
-        <SubmitProposalForm />
-      </section>
+      <AgentMissionWorkspace />
     </main>
   );
 }

@@ -189,6 +189,51 @@ export async function sendLegacyContractTransaction<
   return hash;
 }
 
+export async function sendLegacyTransaction({
+  data,
+  gas,
+  to,
+  value,
+}: {
+  data?: `0x${string}`;
+  gas?: bigint;
+  to: Address;
+  value?: bigint;
+}) {
+  if (!window.ethereum) {
+    throw new Error("No injected wallet found. Install MetaMask or Rabby.");
+  }
+
+  await ensureRitualChain();
+
+  const account = await getInjectedAccount();
+  const [estimatedGas, gasPrice] = await Promise.all([
+    gas
+      ? Promise.resolve(gas)
+      : publicClient.estimateGas({
+          account,
+          to,
+          data,
+          value,
+        }),
+    publicClient.getGasPrice(),
+  ]);
+
+  return (await window.ethereum.request({
+    method: "eth_sendTransaction",
+    params: [
+      {
+        from: account,
+        to,
+        data,
+        value: value !== undefined ? toHex(value) : undefined,
+        gas: toHex(estimatedGas),
+        gasPrice: toHex(gasPrice),
+      },
+    ],
+  })) as `0x${string}`;
+}
+
 export async function waitForTransaction(hash: `0x${string}`) {
   return publicClient.waitForTransactionReceipt({ hash, timeout: 120_000 });
 }

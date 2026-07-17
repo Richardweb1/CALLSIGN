@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { formatEther, parseEther, parseEventLogs } from "viem";
 import { callsignAbi } from "../lib/callsignAbi";
 import { callsignAddress } from "../lib/contract";
+import { decodeRitualLlmCompletion, extractRitualLlmResult } from "../lib/ritualLlm";
 import { sovereignAgentAbi } from "../lib/sovereignAgentAbi";
 import {
   getTransactionErrorMessage,
   publicClient,
+  sendLegacyTransaction,
   sendLegacyContractTransaction,
   waitForTransaction,
 } from "../lib/viem";
@@ -39,13 +41,26 @@ type AnalysisDraft = {
   confidence?: string;
   ritual?: {
     precompile?: string;
+    executor?: string;
     model?: string;
     encodedLlmInput?: string;
   };
 };
 
-export function SubmitProposalForm({ signalContext }: { signalContext?: ProposalSignalContext }) {
-  const [signalId, setSignalId] = useState(signalContext?.signalId || "");
+type RitualTransaction = {
+  to: `0x${string}`;
+  data: `0x${string}`;
+  gas: string;
+};
+
+export function SubmitProposalForm({
+  selectedSignalId,
+  signalContext,
+}: {
+  selectedSignalId?: string;
+  signalContext?: ProposalSignalContext;
+}) {
+  const [signalId, setSignalId] = useState(signalContext?.signalId || selectedSignalId || "");
   const [agentId, setAgentId] = useState("");
   const [planURI, setPlanURI] = useState("");
   const [permissionURI, setPermissionURI] = useState("");
@@ -55,6 +70,7 @@ export function SubmitProposalForm({ signalContext }: { signalContext?: Proposal
   const [analysisPending, setAnalysisPending] = useState(false);
   const [analysisDraft, setAnalysisDraft] = useState<AnalysisDraft>();
   const [analysisWarning, setAnalysisWarning] = useState<string>();
+  const [ritualTxHash, setRitualTxHash] = useState<string>();
   const [loadedMissionTitle, setLoadedMissionTitle] = useState<string>();
   const [pending, setPending] = useState(false);
   const [agentPending, setAgentPending] = useState(false);
@@ -65,6 +81,15 @@ export function SubmitProposalForm({ signalContext }: { signalContext?: Proposal
   useEffect(() => {
     if (signalContext?.signalId) setSignalId(signalContext.signalId);
   }, [signalContext?.signalId]);
+
+  useEffect(() => {
+    if (selectedSignalId) {
+      setSignalId(selectedSignalId);
+      setLoadedMissionTitle(undefined);
+      setAnalysisDraft(undefined);
+      setAnalysisWarning(undefined);
+    }
+  }, [selectedSignalId]);
 
   async function resolveSignalContext() {
     if (signalContext?.metadata) return signalContext;
@@ -126,6 +151,10 @@ export function SubmitProposalForm({ signalContext }: { signalContext?: Proposal
       if (!response.ok) throw new Error(result.error || "Unable to analyze signal.");
 
       setAnalysisDraft(result.draft);
+      if (result.ritualTransaction) {
+        await runRitualPrecompile(result.ritualTransaction, result.draft);
+        return;
+      }
       if (result.planURI) setPlanURI(result.planURI);
       if (result.permissionURI) setPermissionURI(result.permissionURI);
       if (result.draft?.riskLevel) setRiskLevel(String(result.draft.riskLevel));
@@ -137,6 +166,51 @@ export function SubmitProposalForm({ signalContext }: { signalContext?: Proposal
     } finally {
       setAnalysisPending(false);
     }
+  }
+
+  async function runRitualPrecompile(ritualTransaction: RitualTransaction, fallbackDraft: AnalysisDraft) {
+    setAnalysisWarning("Wallet will send a real Ritual LLM precompile transaction to 0x0802.");
+    const hash = await sendLegacyTransaction({
+      to: ritualTransaction.to,
+      data: ritualTransaction.data,
+      gas: BigInt(ritualTransaction.gas),
+    });
+    setRitualTxHash(hash);
+    const receipt = await waitForTransaction(hash);
+    const resultHex = extractRitualLlmResult(receipt);
+    if (!resultHex) {
+      throw new Error("Ritual LLM transaction settled without a decoded precompile result. Check the explorer and try again after settlement.");
+    }
+
+    const completion = decodeRitualLlmCompletion(resultHex);
+    const parsed = JSON.parse(completion.content) as AnalysisDraft;
+    const nextDraft = {
+      ...fallbackDraft,
+      ...parsed,
+      source: "ritual-llm-precompile",
+      ritual: fallbackDraft.ritual,
+      confidence: parsed.confidence || `finish_reason:${completion.finishReason}`,
+    };
+    setAnalysisDraft(nextDraft);
+
+    const uploadResponse = await fetch("/api/ritual/finalize-offer-draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        signalId,
+        agentId,
+        draft: nextDraft,
+      }),
+    });
+    const uploadResult = await uploadResponse.json();
+    if (!uploadResponse.ok) throw new Error(uploadResult.error || "Unable to pin Ritual draft.");
+
+    if (uploadResult.planURI) setPlanURI(uploadResult.planURI);
+    if (uploadResult.permissionURI) setPermissionURI(uploadResult.permissionURI);
+    if (nextDraft.riskLevel) setRiskLevel(String(nextDraft.riskLevel));
+    if (nextDraft.price) setPrice(nextDraft.price);
+    if (nextDraft.etaHours) setEtaHours(String(nextDraft.etaHours));
+    setAnalysisWarning(`Ritual LLM executed on-chain. Model: ${completion.model}.`);
   }
 
   async function submit() {
@@ -226,11 +300,11 @@ export function SubmitProposalForm({ signalContext }: { signalContext?: Proposal
       <span className="kicker">Step 2 · Offer</span>
       <h2>Answer a mission</h2>
       <p className="muted">
-        Paste the Mission ID and your Agent ID. Ritual analysis can draft the plan,
-        permissions, risk, price, and ETA before you submit.
+        Choose a mission above or paste a Mission ID, then add your Agent ID. Ritual-assisted
+        draft reads the mission metadata and suggests plan, permissions, risk, price, and ETA.
       </p>
       <div className="mini-help">
-        <span>Mission ID comes from the mission page.</span>
+        <span>Mission ID is filled when you click Answer this mission.</span>
         <span>Agent ID comes from Step 1 after registration.</span>
       </div>
       <div className="form compact-form">
@@ -245,7 +319,7 @@ export function SubmitProposalForm({ signalContext }: { signalContext?: Proposal
           </label>
         </div>
         <button className="btn secondary" disabled={analysisPending || !signalId} onClick={analyzeSignal}>
-          {analysisPending ? "Analyzing..." : "Draft Offer with Ritual"}
+          {analysisPending ? "Analyzing..." : "Draft Ritual-assisted offer"}
         </button>
         {loadedMissionTitle ? (
           <p className="notice">Loaded mission: {loadedMissionTitle}</p>
@@ -258,6 +332,7 @@ export function SubmitProposalForm({ signalContext }: { signalContext?: Proposal
             </div>
             <p className="muted">
               Precompile {analysisDraft.ritual?.precompile || "0x0802"} · {analysisDraft.ritual?.model || "GLM"}
+              {analysisDraft.ritual?.executor ? ` · Executor ${analysisDraft.ritual.executor}` : ""}
             </p>
             <strong>Plan</strong>
             <ul>
@@ -317,6 +392,7 @@ export function SubmitProposalForm({ signalContext }: { signalContext?: Proposal
             <p className="muted">The user can now review and accept this agent response.</p>
           </div>
         ) : null}
+        {ritualTxHash ? <p className="muted tx">Ritual LLM tx: {ritualTxHash}</p> : null}
         {txHash ? <p className="muted tx">Tx: {txHash}</p> : null}
       </div>
     </div>
