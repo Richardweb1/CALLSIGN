@@ -396,12 +396,15 @@ export function SignalDetailClient({ id }: { id: string }) {
                 <span className={mission.status === 2 ? "active" : ""}>Completed / paid</span>
               </div>
               {mission.latestReportURI ? (
-                <p className="muted tx">
-                  Latest report:{" "}
-                  <a href={mission.latestReportURI} target="_blank">
-                    {mission.latestReportURI}
+                <div className="report-saved-row">
+                  <div>
+                    <span className="kicker">Final report</span>
+                    <strong>Saved to IPFS and anchored on-chain.</strong>
+                  </div>
+                  <a className="btn secondary" href={mission.latestReportURI} target="_blank">
+                    View report
                   </a>
-                </p>
+                </div>
               ) : null}
               {isMissionCompleted ? (
                 <div className="success-box responder-detail">
