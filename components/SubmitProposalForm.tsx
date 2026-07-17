@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { parseEther, parseEventLogs } from "viem";
+import { formatEther, parseEther, parseEventLogs } from "viem";
 import { callsignAbi } from "../lib/callsignAbi";
 import { callsignAddress } from "../lib/contract";
 import { sovereignAgentAbi } from "../lib/sovereignAgentAbi";
@@ -55,6 +55,7 @@ export function SubmitProposalForm({ signalContext }: { signalContext?: Proposal
   const [analysisPending, setAnalysisPending] = useState(false);
   const [analysisDraft, setAnalysisDraft] = useState<AnalysisDraft>();
   const [analysisWarning, setAnalysisWarning] = useState<string>();
+  const [loadedMissionTitle, setLoadedMissionTitle] = useState<string>();
   const [pending, setPending] = useState(false);
   const [agentPending, setAgentPending] = useState(false);
   const [txHash, setTxHash] = useState<string>();
@@ -65,11 +66,47 @@ export function SubmitProposalForm({ signalContext }: { signalContext?: Proposal
     if (signalContext?.signalId) setSignalId(signalContext.signalId);
   }, [signalContext?.signalId]);
 
+  async function resolveSignalContext() {
+    if (signalContext?.metadata) return signalContext;
+    if (!signalId) throw new Error("Mission ID is required.");
+
+    const signal = await publicClient.readContract({
+      address: callsignAddress,
+      abi: callsignAbi,
+      functionName: "getSignal",
+      args: [BigInt(signalId)],
+    });
+
+    let metadata: ProposalSignalContext["metadata"];
+    if (signal.problemURI) {
+      const response = await fetch(`/api/ipfs/resolve?uri=${encodeURIComponent(signal.problemURI)}`);
+      if (response.ok) {
+        const resolved = await response.json();
+        if (resolved?.data && typeof resolved.data === "object") {
+          metadata = resolved.data;
+        }
+      }
+    }
+
+    const title = metadata?.title || signal.title;
+    setLoadedMissionTitle(title);
+
+    return {
+      signalId,
+      title,
+      problemURI: signal.problemURI,
+      budget: metadata?.budget || formatEther(signal.budget),
+      tags: [...signal.tags],
+      metadata,
+    };
+  }
+
   async function analyzeSignal() {
     setAnalysisPending(true);
     setError(undefined);
     setAnalysisWarning(undefined);
     try {
+      const resolvedSignal = await resolveSignalContext();
       const response = await fetch("/api/ritual/analyze-signal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -77,12 +114,12 @@ export function SubmitProposalForm({ signalContext }: { signalContext?: Proposal
           signalId,
           agentId,
           signal: {
-            title: signalContext?.title,
-            problemURI: signalContext?.problemURI,
-            budget: signalContext?.budget,
-            tags: signalContext?.tags,
+            title: resolvedSignal.title,
+            problemURI: resolvedSignal.problemURI,
+            budget: resolvedSignal.budget,
+            tags: resolvedSignal.tags,
           },
-          metadata: signalContext?.metadata,
+          metadata: resolvedSignal.metadata,
         }),
       });
       const result = await response.json();
@@ -210,6 +247,9 @@ export function SubmitProposalForm({ signalContext }: { signalContext?: Proposal
         <button className="btn secondary" disabled={analysisPending || !signalId} onClick={analyzeSignal}>
           {analysisPending ? "Analyzing..." : "Draft Offer with Ritual"}
         </button>
+        {loadedMissionTitle ? (
+          <p className="notice">Loaded mission: {loadedMissionTitle}</p>
+        ) : null}
         {analysisDraft ? (
           <div className="analysis-box">
             <div className="row-head">
