@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatEther, parseEther, parseEventLogs } from "viem";
+import { formatEther, parseAbiItem, parseEther, parseEventLogs, type Address } from "viem";
 import { callsignAbi } from "../lib/callsignAbi";
 import { callsignAddress } from "../lib/contract";
 import { decodeRitualLlmCompletion, extractRitualLlmResult } from "../lib/ritualLlm";
 import { sovereignAgentAbi } from "../lib/sovereignAgentAbi";
 import {
+  getConnectedAccount,
   getTransactionErrorMessage,
   publicClient,
   sendLegacyTransaction,
@@ -62,6 +63,9 @@ export function SubmitProposalForm({
 }) {
   const [signalId, setSignalId] = useState(signalContext?.signalId || selectedSignalId || "");
   const [agentId, setAgentId] = useState("");
+  const [ownedAgentIds, setOwnedAgentIds] = useState<string[]>([]);
+  const [agentLookupPending, setAgentLookupPending] = useState(false);
+  const [connectedAccount, setConnectedAccount] = useState<Address>();
   const [planURI, setPlanURI] = useState("");
   const [permissionURI, setPermissionURI] = useState("");
   const [riskLevel, setRiskLevel] = useState("");
@@ -90,6 +94,50 @@ export function SubmitProposalForm({
       setAnalysisWarning(undefined);
     }
   }, [selectedSignalId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadOwnedAgents() {
+      setAgentLookupPending(true);
+      try {
+        const account = await getConnectedAccount();
+        if (!account) {
+          if (!cancelled) {
+            setConnectedAccount(undefined);
+            setOwnedAgentIds([]);
+          }
+          return;
+        }
+
+        const logs = await publicClient.getLogs({
+          address: callsignAddress,
+          event: parseAbiItem(
+            "event AgentRegistered(uint256 indexed agentId,address indexed owner,address indexed agentWallet,address agentContract,string name,string capabilityURI)",
+          ),
+          args: { owner: account },
+          fromBlock: 0n,
+          toBlock: "latest",
+        });
+        const ids = logs.map((log) => log.args.agentId?.toString()).filter(Boolean) as string[];
+
+        if (!cancelled) {
+          setConnectedAccount(account);
+          setOwnedAgentIds(ids);
+          if (!agentId && ids.length) setAgentId(ids[ids.length - 1]);
+        }
+      } catch {
+        if (!cancelled) setOwnedAgentIds([]);
+      } finally {
+        if (!cancelled) setAgentLookupPending(false);
+      }
+    }
+
+    void loadOwnedAgents();
+    return () => {
+      cancelled = true;
+    };
+  }, [agentId]);
 
   async function resolveSignalContext() {
     if (signalContext?.metadata) return signalContext;
@@ -305,7 +353,11 @@ export function SubmitProposalForm({
       </p>
       <div className="mini-help">
         <span>Mission ID is filled when you click Answer this mission.</span>
-        <span>Agent ID comes from Step 1 after registration.</span>
+        <span>
+          {ownedAgentIds.length
+            ? `Found Agent ID ${ownedAgentIds[ownedAgentIds.length - 1]} for your wallet.`
+            : "Agent ID comes from Step 1 after registration."}
+        </span>
       </div>
       <div className="form compact-form">
         <div className="form-grid">
@@ -315,9 +367,23 @@ export function SubmitProposalForm({
           </label>
           <label className="field">
             <span>Agent ID</span>
-            <input className="input" placeholder="Example: 7" value={agentId} onChange={(event) => setAgentId(event.target.value)} />
+            {ownedAgentIds.length ? (
+              <select className="input" value={agentId} onChange={(event) => setAgentId(event.target.value)}>
+                {ownedAgentIds.map((id) => (
+                  <option value={id} key={id}>
+                    Agent #{id}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input className="input" placeholder="Example: 7" value={agentId} onChange={(event) => setAgentId(event.target.value)} />
+            )}
           </label>
         </div>
+        {agentLookupPending ? <p className="notice">Looking for agents registered by your wallet...</p> : null}
+        {!agentLookupPending && connectedAccount && !ownedAgentIds.length ? (
+          <p className="notice">No Agent ID found for this wallet yet. Register once in Step 1, then this field will fill automatically.</p>
+        ) : null}
         <button className="btn secondary" disabled={analysisPending || !signalId} onClick={analyzeSignal}>
           {analysisPending ? "Analyzing..." : "Draft Ritual-assisted offer"}
         </button>
